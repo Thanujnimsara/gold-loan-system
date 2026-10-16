@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Gold Loan Management System - Track and manage gold loans with NIC and Ticket Number lookup">
+    <title>Gold Loan Management System | Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💎</text></svg>">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">💎</div>
+                <div class="brand-text">
+                    <h1>Gold Loan MS</h1>
+                    <span>Management System</span>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+                        <span class="nav-icon">📊</span>
+                        Dashboard
+                    </div>
+                    <div class="nav-item" data-page="loans" onclick="navigate('loans')">
+                        <span class="nav-icon">🏷️</span>
+                        All Loans
+                        <span class="nav-badge" id="nav-loan-count">-</span>
+                    </div>
+                    <div class="nav-item" data-page="customers" onclick="navigate('customers')">
+                        <span class="nav-icon">👥</span>
+                        Customers
+                        <span class="nav-badge" id="nav-customer-count">-</span>
+                    </div>
+                    <div class="nav-item" data-page="billing" onclick="navigate('billing')">
+                        <span class="nav-icon">🧾</span>
+                        Bill & Sell Gold
+                        <span class="nav-badge" id="nav-bill-count" style="background:var(--gold-500); color:#000;">New</span>
+                    </div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Records</div>
+                    <div class="nav-item" data-page="auctions" onclick="navigate('auctions')">
+                        <span class="nav-icon">🔨</span>
+                        Auctions
+                    </div>
+                    <div class="nav-item" data-page="gold-rates" onclick="navigate('gold-rates')">
+                        <span class="nav-icon">📈</span>
+                        Gold Rates
+                    </div>
+                    <div class="nav-item" data-page="product-rates" onclick="navigate('product-rates')">
+                        <span class="nav-icon">💰</span>
+                        Product Rates
+                    </div>
+                    <div class="nav-item" data-page="database" onclick="navigate('database')">
+                        <span class="nav-icon">🗄️</span>
+                        Database Explorer
+                        <span class="nav-badge" id="nav-db-count">9 Tables</span>
+                    </div>
+                </div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Quick Access</div>
+                    <div class="nav-item" onclick="focusSearch('nic')">
+                        <span class="nav-icon">🔍</span>
+                        Search by NIC
+                    </div>
+                    <div class="nav-item" onclick="focusSearch('ticket')">
+                        <span class="nav-icon">🎫</span>
+                        Search by Ticket
+                    </div>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="sidebar-footer-text">
+                    Gold Loan MS v1.0<br>
+                    © 2026 Global Stanford
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+                <div class="search-container">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchInput" placeholder="Search by NIC, Ticket No, or Name..."
+                               oninput="handleSearch()" onfocus="handleSearch()">
+                        <div class="search-type-toggle">
+                            <button class="search-type-btn active" data-type="all" onclick="setSearchType('all')">All</button>
+                            <button class="search-type-btn" data-type="nic" onclick="setSearchType('nic')">NIC</button>
+                            <button class="search-type-btn" data-type="ticket" onclick="setSearchType('ticket')">Ticket</button>
+                        </div>
+                    </div>
+                    <div class="search-results-dropdown" id="searchResults"></div>
+                </div>
+                <div class="top-bar-actions">
+                    <button class="top-bar-bill-btn" onclick="navigate('billing')" title="Create Bill / Sell Gold" style="display:flex;align-items:center;gap:6px;background:var(--gradient-gold);color:#0a0a0f;font-weight:700;font-size:13px;padding:8px 14px;border:none;border-radius:var(--radius-sm);cursor:pointer;box-shadow:var(--shadow-gold);">
+                        <span>🧾</span> New Bill
+                    </button>
+                    <button class="top-bar-btn" onclick="loadDashboard()" title="Refresh">🔄</button>
+                </div>
+            </div>
+
+            <!-- Dashboard Page -->
+            <div class="page active" id="page-dashboard">
+                <div class="page-content">
+                    <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <h2 class="page-title">Dashboard</h2>
+                            <p class="page-subtitle">Overview of Gold Loan operations</p>
+                        </div>
+                        <button class="btn btn-primary-gold" onclick="navigate('billing')" style="display:flex;align-items:center;gap:8px;padding:10px 18px;font-size:14px;font-weight:700;">
+                            <span>🧾</span> Open Bill & Sales System →
+                        </button>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="stats-grid" id="statsGrid">
+                        <div class="stat-card gold">
+                            <div class="stat-icon gold">💰</div>
+                            <div class="stat-label">Total Active Advance</div>
+                            <div class="stat-value gold-text" id="stat-active-advance">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green">📋</div>
+                            <div class="stat-label">Active Loans</div>
+                            <div class="stat-value" id="stat-active-loans">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon blue">✅</div>
+                            <div class="stat-label">Redeemed Loans</div>
+                            <div class="stat-value" id="stat-redeemed-loans">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon purple">👥</div>
+                            <div class="stat-label">Total Customers</div>
+                            <div class="stat-value" id="stat-customers">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon red">🔨</div>
+                            <div class="stat-label">Auction Loans</div>
+                            <div class="stat-value" id="stat-auction-loans">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="charts-grid">
+                        <!-- Monthly Trends -->
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title">Monthly Loan Trends</div>
+                                    <div class="chart-subtitle">Loans disbursed per month</div>
+                                </div>
+                            </div>
+                            <div class="bar-chart" id="monthlyChart"></div>
+                        </div>
+
+                        <!-- Status Distribution -->
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title">Loan Status</div>
+                                    <div class="chart-subtitle">Distribution by status</div>
+                                </div>
+                            </div>
+                            <div class="donut-container" id="statusChart"></div>
+                        </div>
+
+                        <!-- Top Articles -->
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title">Top Gold Articles</div>
+                                    <div class="chart-subtitle">Most common article types</div>
+                                </div>
+                            </div>
+                            <div class="h-bar-list" id="articlesChart"></div>
+                        </div>
+
+                        <!-- Karat Distribution -->
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div>
+                                    <div class="chart-title">Karat Distribution</div>
+                                    <div class="chart-subtitle">Articles by karat value</div>
+                                </div>
+                            </div>
+                            <div class="h-bar-list" id="karatChart"></div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Loans Table -->
+                    <div class="table-card">
+                        <div class="table-header">
+                            <div class="table-title">Recent Loans</div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Ticket No</th>
+                                        <th>NIC</th>
+                                        <th>Customer</th>
+                                        <th>Advance</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentLoansBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Loans Page -->
+            <div class="page" id="page-loans">
+                <div class="page-content">
+                    <div class="page-header">
+                        <h2 class="page-title">All Loans</h2>
+                        <p class="page-subtitle">Complete loan register</p>
+                    </div>
+                    <div class="table-card">
+                        <div class="table-header">
+                            <div class="table-title" id="loans-table-title">Loans</div>
+                            <div class="table-actions">
+                                <button class="table-filter-btn active" onclick="filterLoans('')">All</button>
+                                <button class="table-filter-btn" onclick="filterLoans('ACTIVE')">Active</button>
+                                <button class="table-filter-btn" onclick="filterLoans('REDEEMED')">Redeemed</button>
+                                <button class="table-filter-btn" onclick="filterLoans('AUCTION')">Auction</button>
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortLoans('ticket_no')">Ticket No</th>
+                                        <th onclick="sortLoans('nic_no')">NIC</th>
+                                        <th onclick="sortLoans('name')">Customer</th>
+                                        <th onclick="sortLoans('grand_advance')">Advance</th>
+                                        <th>Period</th>
+                                        <th onclick="sortLoans('status')">Status</th>
+                                        <th onclick="sortLoans('pawned_date')">Pawned Date</th>
+                                        <th>Maturity</th>
+                                        <th>Mobile</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="loansTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="table-footer">
+                            <div class="table-info" id="loans-table-info">-</div>
+                            <div class="pagination" id="loans-pagination"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customers Page -->
+            <div class="page" id="page-customers">
+                <div class="page-content">
+                    <div class="page-header">
+                        <h2 class="page-title">Customers</h2>
+                        <p class="page-subtitle">All registered customers</p>
+                    </div>
+                    <div class="table-card">
+                        <div class="table-header">
+                            <div class="table-title">Customer Register</div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>NIC</th>
+                                        <th>Name</th>
+                                        <th>Address</th>
+                                        <th>Mobile</th>
+                                        <th>Loans</th>
+                                        <th>Active</th>
+                                        <th>Total Advance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="customersTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="table-footer">
+                            <div class="table-info" id="customers-table-info">-</div>
+                            <div class="pagination" id="customers-pagination"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Detail Page -->
+            <div class="page" id="page-customer-detail">
+                <div class="page-content">
+                    <button class="back-btn" onclick="navigate('customers')">← Back to Customers</button>
+                    <div id="customerDetailContent"></div>
+                </div>
+            </div>
+
+            <!-- Auctions Page -->
+            <div class="page" id="page-auctions">
+                <div class="page-content">
+                    <div class="page-header">
+                        <h2 class="page-title">Auction Items</h2>
+                        <p class="page-subtitle">Gold items pending or completed auction</p>
+                    </div>
+                    <div class="table-card">
+                        <div class="table-header">
+                            <div class="table-title">Auction Register</div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Ticket No</th>
+                                        <th>Article</th>
+                                        <th>Karat</th>
+                                        <th>Weight (g)</th>
+                                        <th>Advance</th>
+                                        <th>Status</th>
+                                        <th>Auction Date</th>
+                                        <th>Redeemed Amt</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="auctionsTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gold Rates Page -->
+            <div class="page" id="page-gold-rates">
+                <div class="page-content">
+                    <div class="page-header">
+                        <h2 class="page-title">Gold Rates</h2>
+                        <p class="page-subtitle">Current gold price per karat</p>
+                    </div>
+                    <div class="rates-grid" id="goldRatesGrid"></div>
+                </div>
+            </div>
+
+            <!-- Product Rates Page -->
+            <div class="page" id="page-product-rates">
+                <div class="page-content">
+                    <div class="page-header">
+                        <h2 class="page-title">Product Rates</h2>
+                        <p class="page-subtitle">Interest rates by karat and period</p>
+                    </div>
+                    <div class="table-card">
+                        <div class="table-header">
+                            <div class="table-title">Rate Card</div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Karat</th>
+                                        <th>Period (Months)</th>
+                                        <th>Advance Amount</th>
+                                        <th>Monthly Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productRatesBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Billing & Invoicing Page -->
+            <div class="page" id="page-billing">
+                <div class="page-content">
+                    <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+                        <div>
+                            <h2 class="page-title">🧾 Gold Loan Billing & Invoicing System</h2>
+                            <p class="page-subtitle">Select gold articles from customer loans or sell directly, calculate charges, and print official bills</p>
+                        </div>
+                        <div class="billing-header-tabs" style="display:flex; gap:10px;">
+                            <button class="tab-btn active" id="tabNewBill" onclick="switchBillingTab('new')">
+                                ➕ Create New Bill
+                            </button>
+                            <button class="tab-btn" id="tabHistory" onclick="switchBillingTab('history')">
+                                📜 Invoice History (<span id="billingHistoryCount">0</span>)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TAB 1: NEW BILL SECTION -->
+                    <div id="billingNewSection">
+                        <div class="billing-grid">
+                            <!-- Left Column: Customer & Gold Article Selection -->
+                            <div class="billing-left-col">
+                                <!-- Customer Selection Card -->
+                                <div class="card billing-card">
+                                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                                        <div class="card-title">1. Customer & Loan Selection</div>
+                                        <button type="button" class="btn-text-gold" onclick="resetCustomerSelection()" style="font-size:12px; cursor:pointer; background:none; border:none; color:var(--text-gold);">✕ Clear</button>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Instant Search Bar for Customer -->
+                                        <div class="input-group" id="billCustomerSearchBox" style="position:relative; margin-bottom:14px;">
+                                            <label class="input-label">Search Customer by NIC or Ticket No</label>
+                                            <div style="display:flex; gap:8px;">
+                                                <input type="text" id="billCustomerSearchInput" class="custom-input" placeholder="Type NIC (e.g. 723442834V) or Ticket (e.g. L/PW/UH/000001)..." oninput="handleBillingSearch()" onkeydown="if(event.key==='Enter'){handleBillingSearch(true);}" autocomplete="off">
+                                                <button type="button" class="btn btn-secondary" onclick="handleBillingSearch(true)" style="white-space:nowrap; padding:0 16px;">Search</button>
+                                            </div>
+                                            <div class="billing-search-dropdown" id="billingSearchDropdown"></div>
+                                        </div>
+
+                                        <!-- Customer Information Inputs (Pre-filled or editable) -->
+                                        <div class="form-row-2">
+                                            <div class="input-group">
+                                                <label class="input-label">Customer Name *</label>
+                                                <input type="text" id="billCustomerName" class="custom-input" placeholder="Enter Full Name">
+                                            </div>
+                                            <div class="input-group">
+                                                <label class="input-label">NIC Number</label>
+                                                <input type="text" id="billCustomerNic" class="custom-input" placeholder="e.g. 198512345678 or 723442834V">
+                                            </div>
+                                        </div>
+                                        <div class="form-row-2">
+                                            <div class="input-group">
+                                                <label class="input-label">Phone / Mobile</label>
+                                                <input type="text" id="billCustomerPhone" class="custom-input" placeholder="077xxxxxxx">
+                                            </div>
+                                            <div class="input-group">
+                                                <label class="input-label">Ticket / Loan Ref</label>
+                                                <input type="text" id="billTicketNo" class="custom-input" placeholder="e.g. L/PW/UH/000001 (Optional)" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="input-group">
+                                            <label class="input-label">Address</label>
+                                            <input type="text" id="billCustomerAddress" class="custom-input" placeholder="Customer Address">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Available Gold Articles from Customer Loan Card -->
+                                <div class="card billing-card" id="loanArticlesCard" style="display:none; margin-top:20px;">
+                                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                                        <div class="card-title">📦 Customer Pledged Gold Articles</div>
+                                        <span class="badge badge-gold" id="loanArticlesBadge">0 items available</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Click "+ Add to Bill" to sell or redeem specific articles:</p>
+                                        <div class="table-wrapper">
+                                            <table class="table-compact">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Article</th>
+                                                        <th>Karat</th>
+                                                        <th>Weight</th>
+                                                        <th>Est. Rate/g</th>
+                                                        <th>Market Value</th>
+                                                        <th>Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="loanArticlesTableBody"></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Add Custom / Direct Gold Article Card -->
+                                <div class="card billing-card" style="margin-top:20px;">
+                                    <div class="card-header">
+                                        <div class="card-title">➕ Add Custom Gold Article / Direct Sale</div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-row-4">
+                                            <div class="input-group">
+                                                <label class="input-label">Article Name</label>
+                                                <input type="text" id="customArticleName" class="custom-input" placeholder="e.g. Gold Necklace, Ring" value="Gold Article">
+                                            </div>
+                                            <div class="input-group">
+                                                <label class="input-label">Karat</label>
+                                                <select id="customArticleKarat" class="custom-input" onchange="updateCustomRateByKarat()">
+                                                    <option value="24">24 Karat (99.9%)</option>
+                                                    <option value="22" selected>22 Karat (91.6%)</option>
+                                                    <option value="21">21 Karat (87.5%)</option>
+                                                    <option value="20">20 Karat (83.3%)</option>
+                                                    <option value="18">18 Karat (75.0%)</option>
+                                                </select>
+                                            </div>
+                                            <div class="input-group">
+                                                <label class="input-label">Weight (g)</label>
+                                                <input type="number" id="customArticleWeight" class="custom-input" step="0.01" min="0.01" placeholder="8.00" value="8.00" oninput="calculateCustomItemPrice()">
+                                            </div>
+                                            <div class="input-group">
+                                                <label class="input-label">Rate / g (LKR)</label>
+                                                <input type="number" id="customArticleRate" class="custom-input" step="10" placeholder="43000" value="43000" oninput="calculateCustomItemPrice()">
+                                            </div>
+                                        </div>
+                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap; gap:10px;">
+                                            <div style="font-size:13px; color:var(--text-secondary);">
+                                                Calculated Item Total: <strong id="customItemTotalDisplay" style="color:var(--text-gold); font-size:16px;">Rs. 344,000</strong>
+                                            </div>
+                                            <button type="button" class="btn btn-gold" onclick="addCustomItemToBill()" style="padding:8px 16px;">
+                                                ➕ Add to Bill
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Current Bill Summary, Pricing & Actions -->
+                            <div class="billing-right-col">
+                                <div class="card billing-card sticky-card">
+                                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                                        <div class="card-title">🧾 Current Bill Invoice</div>
+                                        <span class="badge" id="billItemCountBadge">0 Items</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Items Selected for Bill -->
+                                        <div class="bill-items-list" id="billItemsList">
+                                            <div class="empty-state" style="padding:24px 10px;">
+                                                <div class="empty-state-icon" style="font-size:2rem;">💍</div>
+                                                <div class="empty-state-text" style="font-size:13px;">No articles in bill yet. Select from customer loan or add a custom article.</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Calculations Section -->
+                                        <div class="bill-calc-section" style="margin-top:16px; border-top:1px solid var(--border-subtle); padding-top:16px;">
+                                            <div class="calc-row">
+                                                <span class="calc-label">Subtotal (Gold Articles):</span>
+                                                <span class="calc-value" id="billSubtotalDisplay">Rs. 0</span>
+                                            </div>
+                                            <div class="calc-row">
+                                                <span class="calc-label">Making / Service Charge:</span>
+                                                <div class="calc-input-wrap">
+                                                    <span class="currency-prefix">Rs.</span>
+                                                    <input type="number" id="billServiceCharge" class="calc-input" value="0" min="0" oninput="recalculateBill()">
+                                                </div>
+                                            </div>
+                                            <div class="calc-row">
+                                                <span class="calc-label">Loan Interest / Settlement:</span>
+                                                <div class="calc-input-wrap">
+                                                    <span class="currency-prefix">Rs.</span>
+                                                    <input type="number" id="billInterestAmount" class="calc-input" value="0" min="0" oninput="recalculateBill()">
+                                                </div>
+                                            </div>
+                                            <div class="calc-row" id="loanRedeemToggleRow" style="display:none;">
+                                                <label class="checkbox-label" style="font-size:12px; color:var(--text-gold); cursor:pointer;">
+                                                    <input type="checkbox" id="billMarkLoanRedeemed" checked>
+                                                    Mark Ticket Loan as REDEEMED in database
+                                                </label>
+                                            </div>
+                                            <div class="calc-row">
+                                                <span class="calc-label">Discount:</span>
+                                                <div class="calc-input-wrap">
+                                                    <span class="currency-prefix">Rs.</span>
+                                                    <input type="number" id="billDiscount" class="calc-input" value="0" min="0" oninput="recalculateBill()">
+                                                </div>
+                                            </div>
+
+                                            <div class="calc-row grand-total-row" style="margin-top:12px; padding:12px; background:var(--bg-elevated); border-radius:var(--radius-md); border:1px solid var(--border-gold);">
+                                                <span class="grand-label" style="font-size:15px; font-weight:700; color:var(--text-primary);">Grand Total:</span>
+                                                <span class="grand-value" id="billGrandTotalDisplay" style="font-size:22px; font-weight:800; color:var(--text-gold);">Rs. 0</span>
+                                            </div>
+
+                                            <!-- Payment details -->
+                                            <div class="form-row-2" style="margin-top:14px;">
+                                                <div class="input-group">
+                                                    <label class="input-label">Payment Mode</label>
+                                                    <select id="billPaymentMethod" class="custom-input">
+                                                        <option value="Cash">Cash 💵</option>
+                                                        <option value="Bank Transfer">Bank Transfer 🏦</option>
+                                                        <option value="Visa / Master Card">Visa / Master Card 💳</option>
+                                                        <option value="Cheque">Cheque 📝</option>
+                                                    </select>
+                                                </div>
+                                                <div class="input-group">
+                                                    <label class="input-label">Amount Received (LKR)</label>
+                                                    <input type="number" id="billPaidAmount" class="custom-input" placeholder="0" oninput="recalculateChange()">
+                                                </div>
+                                            </div>
+
+                                            <div class="calc-row change-row" style="margin-top:8px;">
+                                                <span class="calc-label" style="font-weight:600;">Balance / Change:</span>
+                                                <span class="calc-value" id="billChangeDisplay" style="font-weight:700; color:var(--status-active); font-size:16px;">Rs. 0</span>
+                                            </div>
+
+                                            <div class="input-group" style="margin-top:10px;">
+                                                <label class="input-label">Cashier / Staff Name</label>
+                                                <input type="text" id="billCashier" class="custom-input" value="Authorized Cashier">
+                                            </div>
+
+                                            <div class="input-group" style="margin-top:8px;">
+                                                <label class="input-label">Remarks / Special Notes</label>
+                                                <input type="text" id="billNotes" class="custom-input" placeholder="e.g. 22K Hallmarked Gold, Certified Authentic">
+                                            </div>
+
+                                            <!-- Action Buttons -->
+                                            <div class="bill-actions" style="margin-top:18px; display:flex; flex-direction:column; gap:10px;">
+                                                <button type="button" class="btn btn-primary-gold" onclick="submitAndPrintBill()" style="padding:14px; font-size:15px; font-weight:700; width:100%; display:flex; align-items:center; justify-content:center; gap:8px;">
+                                                    <span>🖨️</span> Complete & Print Bill
+                                                </button>
+                                                <div style="display:flex; gap:10px;">
+                                                    <button type="button" class="btn btn-secondary" onclick="submitBillOnly()" style="flex:1; padding:10px;">
+                                                        💾 Save Bill Only
+                                                    </button>
+                                                    <button type="button" class="btn btn-secondary" onclick="resetEntireBill()" style="flex:1; padding:10px; color:var(--status-auction);">
+                                                        🗑️ Clear
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: BILL HISTORY / INVOICE REGISTER SECTION -->
+                    <div id="billingHistorySection" style="display:none;">
+                        <div class="table-card">
+                            <div class="table-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                                <div>
+                                    <div class="table-title">Registered Customer Invoices</div>
+                                    <div class="table-subtitle">All printed and saved sales and redemptions</div>
+                                </div>
+                                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                    <input type="text" id="billHistorySearch" class="custom-input" placeholder="Search by Bill No, Customer, NIC..." oninput="loadBillingHistory()" style="width:260px;">
+                                    <button type="button" class="btn btn-secondary" onclick="loadBillingHistory()">🔄 Refresh</button>
+                                    <a href="/api/bills/export" download class="btn btn-gold" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; padding:8px 14px; font-size:13px; font-weight:600;">
+                                        <span>📥</span> Export Excel/CSV
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Invoice No</th>
+                                            <th>Date & Time</th>
+                                            <th>Customer Name</th>
+                                            <th>NIC No</th>
+                                            <th>Ticket Ref</th>
+                                            <th>Items</th>
+                                            <th>Grand Total</th>
+                                            <th>Payment</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="billingHistoryTableBody">
+                                        <tr><td colspan="9" style="text-align:center; padding:30px;">Loading invoices...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="pagination-container" id="billing-pagination"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Database Explorer Page -->
+            <div class="page" id="page-database">
+                <div class="page-content">
+                    <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                        <div>
+                            <h2 class="page-title">🗄️ Database Explorer (`goldloan.db`)</h2>
+                            <p class="page-subtitle">Inspect tables, browse raw records, search data, and monitor database statistics</p>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <a href="/api/bills/export" download class="btn btn-gold" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; padding:8px 14px; font-size:13px; font-weight:600;">
+                                <span>📥</span> Export Invoices CSV
+                            </a>
+                            <button type="button" class="btn btn-secondary" onclick="loadDatabaseExplorer()">🔄 Refresh DB</button>
+                        </div>
+                    </div>
+
+                    <!-- Database Tables Cards Grid -->
+                    <div class="stats-grid" id="dbTablesGrid" style="margin-bottom:24px;"></div>
+
+                    <!-- Active Table Browser Card -->
+                    <div class="table-card">
+                        <div class="table-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                            <div>
+                                <div class="table-title" id="dbActiveTableTitle">Table: loans</div>
+                                <div class="table-subtitle" id="dbActiveTableSubtitle">Showing records</div>
+                            </div>
+                            <div style="display:flex; gap:10px;">
+                                <input type="text" id="dbTableSearchInput" class="custom-input" placeholder="Search table..." oninput="handleDbTableSearch()" style="width:240px;">
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table id="dbTableContent">
+                                <thead id="dbTableHeader"></thead>
+                                <tbody id="dbTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-container" id="db-pagination"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Official Printable Invoice Modal -->
+    <div class="invoice-modal-overlay" id="invoiceModalOverlay">
+        <div class="invoice-modal-content">
+            <div class="invoice-modal-actions no-print">
+                <button type="button" class="btn btn-primary-gold" onclick="printCurrentInvoice()" style="font-size:14px; font-weight:700;">
+                    🖨️ Print Receipt / Invoice (Ctrl+P)
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeInvoiceModal()">
+                    ✕ Close Preview
+                </button>
+            </div>
+
+            <!-- Printable Document Area -->
+            <div class="printable-invoice-sheet" id="printableInvoice">
+                <!-- Official Header -->
+                <div class="invoice-header">
+                    <div class="company-logo-area">
+                        <div class="invoice-brand-icon">💎</div>
+                        <div>
+                            <h1 class="company-title">GLOBAL STANFORD GOLD LOAN & JEWELLERY</h1>
+                            <p class="company-subtitle">Licensed Pawnbrokers, Gold Merchants & Certified Gem Specialists</p>
+                            <p class="company-address">Colombo / Kandy Main Branch · Hotline: +94 11 234 5678 / +94 77 123 4567 · Web: www.globalstanford.lk</p>
+                        </div>
+                    </div>
+                    <div class="invoice-meta-badge">
+                        <div class="invoice-type-tag">OFFICIAL BILL / INVOICE</div>
+                        <div class="inv-number" id="invDisplayNumber">INV-20260925-0001</div>
+                        <div class="inv-date-time" id="invDisplayDateTime">25/09/2026 07:30 PM</div>
+                    </div>
+                </div>
+
+                <div class="invoice-divider"></div>
+
+                <!-- Customer & Transaction Details -->
+                <div class="invoice-details-grid">
+                    <div class="inv-box">
+                        <div class="inv-box-title">CUSTOMER DETAILS (බිල්පත ලබන්නා)</div>
+                        <div class="inv-row"><strong>Name:</strong> <span id="invCustomerName">-</span></div>
+                        <div class="inv-row"><strong>NIC No:</strong> <span id="invCustomerNic">-</span></div>
+                        <div class="inv-row"><strong>Phone:</strong> <span id="invCustomerPhone">-</span></div>
+                        <div class="inv-row"><strong>Address:</strong> <span id="invCustomerAddress">-</span></div>
+                    </div>
+                    <div class="inv-box">
+                        <div class="inv-box-title">TRANSACTION DETAILS (ගනුදෙනු විස්තර)</div>
+                        <div class="inv-row"><strong>Bill Type:</strong> <span id="invBillType">Gold Sale / Settlement</span></div>
+                        <div class="inv-row"><strong>Ticket / Loan Ref:</strong> <span id="invTicketNo">-</span></div>
+                        <div class="inv-row"><strong>Payment Mode:</strong> <span id="invPaymentMode">Cash</span></div>
+                        <div class="inv-row"><strong>Served By (Cashier):</strong> <span id="invCashier">Authorized Officer</span></div>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <div class="invoice-table-wrap">
+                    <table class="inv-table">
+                        <thead>
+                            <tr>
+                                <th style="width:40px;">#</th>
+                                <th>Description / Gold Article (භාණ්ඩය)</th>
+                                <th style="width:80px; text-align:center;">Karat</th>
+                                <th style="width:100px; text-align:right;">Weight (g)</th>
+                                <th style="width:120px; text-align:right;">Rate / g (LKR)</th>
+                                <th style="width:140px; text-align:right;">Amount (LKR)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invItemsTableBody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Totals & Calculations Grid -->
+                <div class="invoice-summary-grid">
+                    <div class="inv-words-box">
+                        <div style="font-size:11px; text-transform:uppercase; color:#666; font-weight:600;">Amount in Words (වචනයෙන්):</div>
+                        <div class="inv-words-text" id="invAmountInWords">Sri Lankan Rupees Only</div>
+                        <div class="inv-notes-text" id="invNotesText" style="margin-top:10px; font-style:italic; font-size:12px; color:#555;"></div>
+                    </div>
+                    <div class="inv-amounts-box">
+                        <div class="inv-sum-row">
+                            <span>Articles Subtotal:</span>
+                            <strong id="invSubtotal">Rs. 0</strong>
+                        </div>
+                        <div class="inv-sum-row" id="invServiceChargeRow">
+                            <span>Making / Service Charge:</span>
+                            <strong id="invServiceCharge">Rs. 0</strong>
+                        </div>
+                        <div class="inv-sum-row" id="invInterestRow">
+                            <span>Loan Interest / Settlement:</span>
+                            <strong id="invInterest">Rs. 0</strong>
+                        </div>
+                        <div class="inv-sum-row" id="invDiscountRow">
+                            <span>Special Discount:</span>
+                            <strong id="invDiscount" style="color:#d9534f;">- Rs. 0</strong>
+                        </div>
+                        <div class="inv-sum-row inv-total-row">
+                            <span>TOTAL AMOUNT:</span>
+                            <span class="inv-total-val" id="invGrandTotal">Rs. 0</span>
+                        </div>
+                        <div class="inv-sum-row">
+                            <span>Amount Paid / Tendered:</span>
+                            <strong id="invPaidAmount">Rs. 0</strong>
+                        </div>
+                        <div class="inv-sum-row">
+                            <span>Change / Balance Returned:</span>
+                            <strong id="invBalanceAmount">Rs. 0</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Signatures & Terms Footer -->
+                <div class="invoice-footer">
+                    <div class="inv-signatures">
+                        <div class="sig-block">
+                            <div class="sig-line"></div>
+                            <div class="sig-title">Customer Signature (ගැනුම්කරුගේ අත්සන)</div>
+                            <div class="sig-sub">Items received in satisfactory condition</div>
+                        </div>
+                        <div class="sig-block">
+                            <div class="sig-line"></div>
+                            <div class="sig-title">Authorized Officer (බලයලත් නිලධාරී)</div>
+                            <div class="sig-sub">Global Stanford Gold Loan & Jewellery Co.</div>
+                        </div>
+                    </div>
+                    <div class="inv-terms">
+                        <p>• Certified genuine gold articles tested as per international assaying standards. All weights certified accurately.</p>
+                        <p>• Goods once sold or redeemed cannot be returned without original receipt. This is a computer generated official invoice.</p>
+                        <p style="text-align:center; margin-top:8px; font-weight:600; color:#333;">✨ THANK YOU FOR DOING BUSINESS WITH US! ✨</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Panel (Slide-over) -->
+    <div class="detail-overlay" id="detailOverlay" onclick="closeDetail()"></div>
+    <div class="detail-panel" id="detailPanel">
+        <div class="detail-header">
+            <div>
+                <div class="chart-title" id="detail-title">Loan Details</div>
+                <div class="chart-subtitle" id="detail-subtitle"></div>
+            </div>
+            <button class="detail-close" onclick="closeDetail()">✕</button>
+        </div>
+        <div class="detail-body" id="detailBody">
+            <div class="loading-spinner"><div class="spinner"></div></div>
+        </div>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
