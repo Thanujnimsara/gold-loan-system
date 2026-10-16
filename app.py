@@ -783,6 +783,216 @@ def db_table_data(tname):
     })
 
 
+# ==================== REDEEMED FOLLOW-UP SYSTEM & EXCEL EXPORT ====================
+
+@app.route('/api/redeemed/summary')
+def redeemed_summary():
+    """Summary of customers due for 14-day, 1-month, and 1.5-month follow-ups."""
+    conn = get_db()
+    c = conn.cursor()
+    
+    # 1st List: ~14 days (10 to 18 days)
+    c.execute("""
+        SELECT COUNT(*) FROM loans 
+        WHERE status = 'REDEEMED' AND redeemed_date IS NOT NULL
+        AND CAST(julianday('now', 'localtime') - julianday(redeemed_date) AS INTEGER) BETWEEN 10 AND 18
+    """)
+    count_14_days = c.fetchone()[0]
+    
+    # 2nd List: ~1 month (26 to 35 days)
+    c.execute("""
+        SELECT COUNT(*) FROM loans 
+        WHERE status = 'REDEEMED' AND redeemed_date IS NOT NULL
+        AND CAST(julianday('now', 'localtime') - julianday(redeemed_date) AS INTEGER) BETWEEN 26 AND 35
+    """)
+    count_1_month = c.fetchone()[0]
+    
+    # 3rd List: ~1 month 2 weeks (39 to 50 days)
+    c.execute("""
+        SELECT COUNT(*) FROM loans 
+        WHERE status = 'REDEEMED' AND redeemed_date IS NOT NULL
+        AND CAST(julianday('now', 'localtime') - julianday(redeemed_date) AS INTEGER) BETWEEN 39 AND 50
+    """)
+    count_45_days = c.fetchone()[0]
+    
+    # Total redeemed count
+    c.execute("SELECT COUNT(*) FROM loans WHERE status = 'REDEEMED'")
+    total_redeemed = c.fetchone()[0]
+    
+    # Recent samples approaching
+    c.execute("""
+        SELECT ticket_no, nic_no, name, mobile_no, redeemed_date, grand_advance, redeemed_amount,
+               CAST(julianday('now', 'localtime') - julianday(redeemed_date) AS INTEGER) as days_since,
+               CASE
+                   WHEN CAST(julianday('now', 'localtime') - julianday(redeemed_date) AS INTEGER) BETWEEN 10 AND 18 THEN '14_days'
+                   WHEN CAST(julianday('now', 'localtime') - julianday(redeemed_date) AS INTEGER) BETWEEN 26 AND 35 THEN '1_month'
+                   WHEN CAST(julianday('now', 'localtime') - julianday(redeemed_date) AS INTEGER) BETWEEN 39 AND 50 THEN '45_days'
+                   ELSE 'other'
+               END as stage
+        FROM loans
+        WHERE status = 'REDEEMED' AND redeemed_date IS NOT NULL
+          AND CAST(julianday('now', 'localtime') - julianday(redeemed_date) AS INTEGER) BETWEEN 10 AND 50
+        ORDER BY days_since ASC
+        LIMIT 6
+    """)
+    samples = [dict(r) for r in c.fetchall()]
+    conn.close()
+    
+    return jsonify({
+        'count_14_days': count_14_days,
+        'count_1_month': count_1_month,
+        'count_45_days': count_45_days,
+        'total_due': count_14_days + count_1_month + count_45_days,
+        'total_redeemed': total_redeemed,
+        'samples': samples
+    })
+
+
+@app.route('/api/redeemed/list')
+def redeemed_list():
+    """Get paginated list of redeemed loans with stage filtering and search."""
+    stage = request.args.get('stage', 'all')
+    q = request.args.get('q', '').strip()
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 25))
+    offset = (page - 1) * per_page
+    
+    conn = get_db()
+    c = conn.cursor()
+    
+    where_clauses = ["l.status = 'REDEEMED'"]
+    params = []
+    
+    if stage == '14_days':
+        where_clauses.append("l.redeemed_date IS NOT NULL AND CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER) BETWEEN 10 AND 18")
+    elif stage == '1_month':
+        where_clauses.append("l.redeemed_date IS NOT NULL AND CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER) BETWEEN 26 AND 35")
+    elif stage == '45_days':
+        where_clauses.append("l.redeemed_date IS NOT NULL AND CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER) BETWEEN 39 AND 50")
+        
+    if q:
+        where_clauses.append("(l.name LIKE ? OR l.nic_no LIKE ? OR l.ticket_no LIKE ? OR l.mobile_no LIKE ?)")
+        params.extend([f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%"])
+        
+    where_sql = " AND ".join(where_clauses)
+    
+    c.execute(f"SELECT COUNT(*) FROM loans l WHERE {where_sql}", params)
+    total = c.fetchone()[0]
+    
+    c.execute(f"""
+        SELECT l.*,
+               CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER) as days_since,
+               CASE
+                   WHEN CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER) BETWEEN 10 AND 18 THEN '1st List (14 Days)'
+                   WHEN CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER) BETWEEN 26 AND 35 THEN '2nd List (1 Month)'
+                   WHEN CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER) BETWEEN 39 AND 50 THEN '3rd List (1 Month 2 Weeks)'
+                   ELSE 'Redeemed'
+               END as followup_stage,
+               (SELECT GROUP_CONCAT(article_name || ' (' || COALESCE(karat, '') || 'K ' || weight || 'g)', ', ')
+                FROM articles WHERE ticket_no = l.ticket_no) as articles_detail
+        FROM loans l
+        WHERE {where_sql}
+        ORDER BY l.redeemed_date DESC
+        LIMIT ? OFFSET ?
+    """, params + [per_page, offset])
+    
+    loans = [dict(r) for r in c.fetchall()]
+    conn.close()
+    
+    return jsonify({
+        'loans': loans,
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'total_pages': (total + per_page - 1) // per_page
+    })
+
+
+@app.route('/api/redeemed/export')
+def export_redeemed_excel():
+    """Export redeemed customer list directly to Excel-friendly CSV with full customer details."""
+    stage = request.args.get('stage', 'all')
+    q = request.args.get('q', '').strip()
+    
+    conn = get_db()
+    c = conn.cursor()
+    
+    where_clauses = ["l.status = 'REDEEMED'"]
+    params = []
+    
+    stage_label = "All_Redeemed"
+    if stage == '14_days':
+        stage_label = "1st_List_14_Days"
+        where_clauses.append("l.redeemed_date IS NOT NULL AND CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER) BETWEEN 10 AND 18")
+    elif stage == '1_month':
+        stage_label = "2nd_List_1_Month"
+        where_clauses.append("l.redeemed_date IS NOT NULL AND CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER) BETWEEN 26 AND 35")
+    elif stage == '45_days':
+        stage_label = "3rd_List_1_Month_2_Weeks"
+        where_clauses.append("l.redeemed_date IS NOT NULL AND CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER) BETWEEN 39 AND 50")
+        
+    if q:
+        where_clauses.append("(l.name LIKE ? OR l.nic_no LIKE ? OR l.ticket_no LIKE ? OR l.mobile_no LIKE ?)")
+        params.extend([f"%{q}%", f"%{q}%", f"%{q}%", f"%{q}%"])
+        
+    where_sql = " AND ".join(where_clauses)
+    
+    c.execute(f"""
+        SELECT 
+            l.ticket_no,
+            l.nic_no,
+            l.name,
+            COALESCE(l.mobile_no, ''),
+            COALESCE(l.address1, ''),
+            COALESCE(l.address2, ''),
+            COALESCE(l.address3, ''),
+            COALESCE(l.pawned_date, ''),
+            COALESCE(l.redeemed_date, ''),
+            COALESCE(CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER), ''),
+            CASE
+                WHEN CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER) BETWEEN 10 AND 18 THEN '1st List (14 Days)'
+                WHEN CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER) BETWEEN 26 AND 35 THEN '2nd List (1 Month)'
+                WHEN CAST(julianday('now', 'localtime') - julianday(l.redeemed_date) AS INTEGER) BETWEEN 39 AND 50 THEN '3rd List (1 Month 2 Weeks)'
+                ELSE 'General Redeemed'
+            END as followup_stage,
+            COALESCE(l.grand_advance, 0),
+            COALESCE(l.redeemed_amount, 0),
+            COALESCE(l.period, 1),
+            COALESCE(l.num_articles, 0),
+            (SELECT GROUP_CONCAT(article_name || ' (' || COALESCE(karat, '') || 'K, ' || weight || 'g)', ' | ')
+             FROM articles WHERE ticket_no = l.ticket_no) as articles_detail
+        FROM loans l
+        WHERE {where_sql}
+        ORDER BY l.redeemed_date DESC
+    """, params)
+    
+    rows = c.fetchall()
+    conn.close()
+    
+    output = io.StringIO()
+    output.write('\ufeff')
+    writer = csv.writer(output)
+    writer.writerow([
+        'Ticket No', 'NIC Number', 'Customer Name', 'Mobile Number',
+        'Address Line 1', 'Address Line 2', 'City / Address 3',
+        'Pawned Date', 'Redeemed Date', 'Days Since Redeemed',
+        'Follow-up Category', 'Grand Advance (LKR)', 'Redeemed Amount (LKR)',
+        'Period (Months)', 'Number of Articles', 'Gold Articles & Weight'
+    ])
+    
+    for r in rows:
+        writer.writerow(list(r))
+        
+    date_str = datetime.now().strftime('%Y%m%d_%H%M')
+    filename = f"Redeemed_Customers_{stage_label}_{date_str}.csv"
+    
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment;filename={filename}"}
+    )
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"\n{'='*60}")

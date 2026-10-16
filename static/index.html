@@ -41,6 +41,11 @@
                         Bill & Sell Gold
                         <span class="nav-badge" id="nav-bill-count" style="background:var(--gold-500); color:#000;">New</span>
                     </div>
+                    <div class="nav-item" data-page="redeemed" onclick="navigate('redeemed')">
+                        <span class="nav-icon">🎁</span>
+                        Redeemed Follow-up
+                        <span class="nav-badge" id="nav-redeemed-count" style="background:#10b981; color:#fff;">-</span>
+                    </div>
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">Records</div>
@@ -236,6 +241,7 @@
                                 <button class="table-filter-btn" onclick="filterLoans('ACTIVE')">Active</button>
                                 <button class="table-filter-btn" onclick="filterLoans('REDEEMED')">Redeemed</button>
                                 <button class="table-filter-btn" onclick="filterLoans('AUCTION')">Auction</button>
+                                <button class="table-filter-btn" onclick="exportRedeemedExcel('all')" style="background:#10b981; color:#fff; border-color:#10b981;" title="Export all Redeemed customers to Excel">📥 Export Redeemed Excel</button>
                             </div>
                         </div>
                         <div class="table-wrapper">
@@ -259,6 +265,104 @@
                         <div class="table-footer">
                             <div class="table-info" id="loans-table-info">-</div>
                             <div class="pagination" id="loans-pagination"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Redeemed Customers Follow-up Page -->
+            <div class="page" id="page-redeemed">
+                <div class="page-content">
+                    <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+                        <div>
+                            <h2 class="page-title">Redeemed Customers Follow-up</h2>
+                            <p class="page-subtitle">Milestones: 1st List (14 Days) • 2nd List (1 Month) • 3rd List (1 Month 2 Weeks) • Complete Excel Export</p>
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button class="btn btn-primary" onclick="exportCurrentRedeemedExcel()" style="background:#10b981; border-color:#10b981; display:flex; align-items:center; gap:8px; font-weight:700;">
+                                <span>📥</span> Download Excel (.csv)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Summary Metric Cards -->
+                    <div class="stats-grid" style="margin-bottom:24px;">
+                        <div class="stat-card" style="cursor:pointer;" onclick="filterRedeemedStage('14_days')">
+                            <div class="stat-icon" style="background:rgba(59,130,246,0.15); color:#3b82f6;">📅</div>
+                            <div class="stat-info">
+                                <div class="stat-label">1st List (14 Days)</div>
+                                <div class="stat-value" id="stat-redeemed-14d">-</div>
+                                <div class="stat-sub">10 - 18 days since redeemed</div>
+                            </div>
+                        </div>
+                        <div class="stat-card" style="cursor:pointer;" onclick="filterRedeemedStage('1_month')">
+                            <div class="stat-icon" style="background:rgba(245,158,11,0.15); color:#f59e0b;">⏳</div>
+                            <div class="stat-info">
+                                <div class="stat-label">2nd List (1 Month)</div>
+                                <div class="stat-value" id="stat-redeemed-1m">-</div>
+                                <div class="stat-sub">26 - 35 days since redeemed</div>
+                            </div>
+                        </div>
+                        <div class="stat-card" style="cursor:pointer;" onclick="filterRedeemedStage('45_days')">
+                            <div class="stat-icon" style="background:rgba(239,68,68,0.15); color:#ef4444;">🚨</div>
+                            <div class="stat-info">
+                                <div class="stat-label">3rd List (1.5 Months)</div>
+                                <div class="stat-value" id="stat-redeemed-45d">-</div>
+                                <div class="stat-sub">39 - 50 days (1 mo 2 wks)</div>
+                            </div>
+                        </div>
+                        <div class="stat-card" style="cursor:pointer;" onclick="filterRedeemedStage('all')">
+                            <div class="stat-icon" style="background:rgba(16,185,129,0.15); color:#10b981;">👥</div>
+                            <div class="stat-info">
+                                <div class="stat-label">Total Redeemed</div>
+                                <div class="stat-value" id="stat-redeemed-total">-</div>
+                                <div class="stat-sub">All registered redeemed loans</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Redeemed Table Card -->
+                    <div class="table-card">
+                        <div class="table-header" style="flex-wrap:wrap; gap:12px;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <div class="table-title" id="redeemed-table-title">Redeemed Customer Records</div>
+                                <span class="badge" id="redeemed-badge-count" style="background:#10b981; color:#fff; font-size:12px; padding:3px 8px; border-radius:12px;">-</span>
+                            </div>
+                            <div class="table-actions" style="flex-wrap:wrap; gap:8px;">
+                                <input type="text" id="redeemedSearchInput" placeholder="Search name, NIC, phone, ticket..." 
+                                       oninput="debounceRedeemedSearch()" 
+                                       style="padding:6px 12px; background:var(--bg-secondary); border:1px solid var(--border-subtle); color:var(--text-primary); border-radius:6px; font-size:13px; width:250px;">
+                                <button class="table-filter-btn active" id="btn-stage-all" onclick="filterRedeemedStage('all')">All</button>
+                                <button class="table-filter-btn" id="btn-stage-14d" onclick="filterRedeemedStage('14_days')">14 Days</button>
+                                <button class="table-filter-btn" id="btn-stage-1m" onclick="filterRedeemedStage('1_month')">1 Month</button>
+                                <button class="table-filter-btn" id="btn-stage-45d" onclick="filterRedeemedStage('45_days')">1 Month 2 Weeks</button>
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Ticket No</th>
+                                        <th>Customer Name</th>
+                                        <th>Phone / Mobile</th>
+                                        <th>NIC</th>
+                                        <th>Address</th>
+                                        <th>Redeemed Date</th>
+                                        <th>Days Since</th>
+                                        <th>Follow-up Category</th>
+                                        <th>Advance</th>
+                                        <th>Redeemed Amt</th>
+                                        <th>Articles</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="redeemedTableBody">
+                                    <tr><td colspan="11" style="text-align:center; padding:30px;">Loading redeemed records...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="table-footer">
+                            <div class="table-info" id="redeemed-table-info">-</div>
+                            <div class="pagination" id="redeemed-pagination"></div>
                         </div>
                     </div>
                 </div>
@@ -851,6 +955,50 @@
         <div class="detail-body" id="detailBody">
             <div class="loading-spinner"><div class="spinner"></div></div>
         </div>
+    </div>
+
+    <!-- Floating Redeemed Follow-up Notification Badge & Popup -->
+    <div id="redeemedNotificationPopup" class="redeemed-popup">
+        <div class="redeemed-popup-header">
+            <div class="redeemed-popup-title">
+                <span class="pulse-dot"></span>
+                <span>🔔 Redeemed Follow-up Alert</span>
+            </div>
+            <button class="redeemed-popup-close" onclick="closeRedeemedPopup()" title="Minimize">✕</button>
+        </div>
+        <div class="redeemed-popup-body">
+            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:10px;">
+                Customers approaching retention follow-up milestones:
+            </p>
+            <div class="redeemed-popup-stats">
+                <div class="popup-stat-item" onclick="navigateAndFilterRedeemed('14_days')">
+                    <span class="popup-stat-tag blue">14 Days</span>
+                    <span class="popup-stat-num" id="popup-14d-count">0</span>
+                </div>
+                <div class="popup-stat-item" onclick="navigateAndFilterRedeemed('1_month')">
+                    <span class="popup-stat-tag yellow">1 Month</span>
+                    <span class="popup-stat-num" id="popup-1m-count">0</span>
+                </div>
+                <div class="popup-stat-item" onclick="navigateAndFilterRedeemed('45_days')">
+                    <span class="popup-stat-tag red">1.5 Mo</span>
+                    <span class="popup-stat-num" id="popup-45d-count">0</span>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:14px;">
+                <button type="button" onclick="navigateAndFilterRedeemed('all')" style="flex:1; background:var(--gold-500); color:#000; font-weight:700; padding:8px 10px; border-radius:6px; cursor:pointer; border:none; font-size:12px;">
+                    📋 View List
+                </button>
+                <button type="button" onclick="exportRedeemedExcel('all')" style="flex:1; background:#10b981; color:#fff; font-weight:700; padding:8px 10px; border-radius:6px; cursor:pointer; border:none; font-size:12px;">
+                    📥 Excel Export
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Trigger Button when minimized -->
+    <div id="redeemedFloatingTrigger" class="redeemed-trigger" onclick="openRedeemedPopup()" title="View Redeemed Follow-up Alerts">
+        <span>🔔</span>
+        <span class="trigger-badge" id="floating-badge-count">0</span>
     </div>
 
     <script src="/app.js"></script>

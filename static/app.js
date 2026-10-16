@@ -72,6 +72,7 @@ function navigate(page) {
         case 'gold-rates': loadGoldRates(); break;
         case 'product-rates': loadProductRates(); break;
         case 'billing': initBillingPage(); break;
+        case 'redeemed': loadRedeemedPage(); break;
         case 'database': loadDatabaseExplorer(); break;
     }
 
@@ -165,6 +166,9 @@ async function loadDashboard() {
 
     // Recent loans table
     renderRecentLoans(data.recent_loans || []);
+
+    // Check redeemed customer alerts
+    checkRedeemedAlerts();
 }
 
 function renderMonthlyChart(trends) {
@@ -1633,6 +1637,208 @@ function handleDbTableSearch() {
         dbExplorerState.search = inp ? inp.value.trim() : '';
         selectDbTable(dbExplorerState.activeTable, 1);
     }, 300);
+}
+
+
+// ==================== REDEEMED FOLLOW-UP SYSTEM & EXCEL EXPORT ====================
+
+let redeemedState = {
+    page: 1,
+    perPage: 25,
+    stage: 'all',
+    search: '',
+    searchDebounce: null
+};
+
+async function checkRedeemedAlerts() {
+    try {
+        const summary = await apiGet('/api/redeemed/summary');
+        if (!summary) return;
+
+        // Update Nav Badge
+        const navBadge = document.getElementById('nav-redeemed-count');
+        if (navBadge) {
+            navBadge.textContent = summary.total_due > 0 ? summary.total_due : formatMoney(summary.total_redeemed);
+            if (summary.total_due > 0) {
+                navBadge.style.background = '#ef4444';
+            }
+        }
+
+        // Update Popup Badges
+        const el14 = document.getElementById('popup-14d-count');
+        const el1m = document.getElementById('popup-1m-count');
+        const el45 = document.getElementById('popup-45d-count');
+        const elFloat = document.getElementById('floating-badge-count');
+
+        if (el14) el14.textContent = summary.count_14_days || 0;
+        if (el1m) el1m.textContent = summary.count_1_month || 0;
+        if (el45) el45.textContent = summary.count_45_days || 0;
+        if (elFloat) elFloat.textContent = summary.total_due || 0;
+
+        // Auto-show popup if there are due follow-ups and user hasn't explicitly dismissed it this session
+        const popup = document.getElementById('redeemedNotificationPopup');
+        const trigger = document.getElementById('redeemedFloatingTrigger');
+        if (summary.total_due > 0) {
+            if (!sessionStorage.getItem('redeemed_popup_dismissed')) {
+                if (popup) popup.classList.remove('hidden');
+                if (trigger) trigger.classList.remove('visible');
+            } else {
+                if (popup) popup.classList.add('hidden');
+                if (trigger) trigger.classList.add('visible');
+            }
+        } else {
+            if (popup) popup.classList.add('hidden');
+            if (trigger) trigger.classList.remove('visible');
+        }
+    } catch (e) {
+        console.error('Error checking redeemed alerts:', e);
+    }
+}
+
+function closeRedeemedPopup() {
+    const popup = document.getElementById('redeemedNotificationPopup');
+    const trigger = document.getElementById('redeemedFloatingTrigger');
+    if (popup) popup.classList.add('hidden');
+    if (trigger) trigger.classList.add('visible');
+    sessionStorage.setItem('redeemed_popup_dismissed', 'true');
+}
+
+function openRedeemedPopup() {
+    const popup = document.getElementById('redeemedNotificationPopup');
+    const trigger = document.getElementById('redeemedFloatingTrigger');
+    if (popup) popup.classList.remove('hidden');
+    if (trigger) trigger.classList.remove('visible');
+}
+
+function navigateAndFilterRedeemed(stage) {
+    closeRedeemedPopup();
+    navigate('redeemed');
+    filterRedeemedStage(stage);
+}
+
+async function loadRedeemedPage() {
+    await Promise.all([
+        loadRedeemedSummaryCards(),
+        loadRedeemedTable()
+    ]);
+}
+
+async function loadRedeemedSummaryCards() {
+    const data = await apiGet('/api/redeemed/summary');
+    if (!data) return;
+
+    const el14 = document.getElementById('stat-redeemed-14d');
+    const el1m = document.getElementById('stat-redeemed-1m');
+    const el45 = document.getElementById('stat-redeemed-45d');
+    const elTot = document.getElementById('stat-redeemed-total');
+
+    if (el14) el14.textContent = formatMoney(data.count_14_days);
+    if (el1m) el1m.textContent = formatMoney(data.count_1_month);
+    if (el45) el45.textContent = formatMoney(data.count_45_days);
+    if (elTot) elTot.textContent = formatMoney(data.total_redeemed);
+}
+
+async function loadRedeemedTable() {
+    const tbody = document.getElementById('redeemedTableBody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:30px;"><div class="loading-spinner"><div class="spinner"></div></div></td></tr>';
+    }
+
+    const q = encodeURIComponent(redeemedState.search);
+    const stage = redeemedState.stage;
+    const page = redeemedState.page;
+    const perPage = redeemedState.perPage;
+
+    const data = await apiGet(`/api/redeemed/list?stage=${stage}&page=${page}&per_page=${perPage}&q=${q}`);
+    if (!data) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:30px; color:#ef4444;">Failed to load redeemed records</td></tr>';
+        return;
+    }
+
+    // Update count badge & title
+    const countBadge = document.getElementById('redeemed-badge-count');
+    if (countBadge) countBadge.textContent = `${data.total} records`;
+
+    const tableInfo = document.getElementById('redeemed-table-info');
+    if (tableInfo) {
+        tableInfo.textContent = `Showing ${(data.page - 1) * data.per_page + 1}-${Math.min(data.page * data.per_page, data.total)} of ${data.total} redeemed loans`;
+    }
+
+    if (!data.loans.length) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:30px;"><div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">No redeemed records matching criteria</div></div></td></tr>';
+        renderPagination('redeemed-pagination', 1, 1, () => {});
+        return;
+    }
+
+    tbody.innerHTML = data.loans.map(l => {
+        let badgeClass = 'stage-other';
+        if (l.followup_stage.includes('14 Days')) badgeClass = 'stage-14d';
+        else if (l.followup_stage.includes('1 Month 2')) badgeClass = 'stage-45d';
+        else if (l.followup_stage.includes('1 Month')) badgeClass = 'stage-1m';
+
+        const addr = [l.address1, l.address2, l.address3].filter(Boolean).join(', ');
+
+        return `
+            <tr onclick="openLoanDetail('${l.ticket_no}')" style="cursor:pointer;">
+                <td><span class="ticket-num">${l.ticket_no || '-'}</span></td>
+                <td><strong>${l.name || '-'}</strong></td>
+                <td>
+                    ${l.mobile_no ? `<a href="tel:${l.mobile_no}" onclick="event.stopPropagation();" style="color:var(--text-gold); text-decoration:none; font-weight:600;">📞 ${l.mobile_no}</a>` : '-'}
+                </td>
+                <td style="font-family:monospace;">${l.nic_no || '-'}</td>
+                <td style="font-size:12px; color:var(--text-secondary); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${addr}">${addr || '-'}</td>
+                <td>${formatDate(l.redeemed_date)}</td>
+                <td style="text-align:center;"><strong style="color:var(--text-primary); font-size:13px;">${l.days_since != null ? l.days_since + ' d' : '-'}</strong></td>
+                <td><span class="stage-badge ${badgeClass}">${l.followup_stage}</span></td>
+                <td class="money">Rs. ${formatMoney(l.grand_advance)}</td>
+                <td class="money" style="color:#10b981;">Rs. ${formatMoney(l.redeemed_amount)}</td>
+                <td style="font-size:12px; color:var(--text-secondary); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${l.articles_detail || ''}">${l.articles_detail || '-'}</td>
+            </tr>
+        `;
+    }).join('');
+
+    renderPagination('redeemed-pagination', data.page, data.total_pages, (p) => {
+        redeemedState.page = p;
+        loadRedeemedTable();
+    });
+}
+
+function filterRedeemedStage(stage) {
+    redeemedState.stage = stage;
+    redeemedState.page = 1;
+
+    // Update active filter buttons
+    ['all', '14d', '1m', '45d'].forEach(k => {
+        const btn = document.getElementById(`btn-stage-${k}`);
+        if (btn) btn.classList.remove('active');
+    });
+
+    const activeMap = { 'all': 'btn-stage-all', '14_days': 'btn-stage-14d', '1_month': 'btn-stage-1m', '45_days': 'btn-stage-45d' };
+    const activeBtn = document.getElementById(activeMap[stage]);
+    if (activeBtn) activeBtn.classList.add('active');
+
+    loadRedeemedTable();
+}
+
+function debounceRedeemedSearch() {
+    if (redeemedState.searchDebounce) clearTimeout(redeemedState.searchDebounce);
+    redeemedState.searchDebounce = setTimeout(() => {
+        const inp = document.getElementById('redeemedSearchInput');
+        redeemedState.search = inp ? inp.value.trim() : '';
+        redeemedState.page = 1;
+        loadRedeemedTable();
+    }, 300);
+}
+
+function exportCurrentRedeemedExcel() {
+    exportRedeemedExcel(redeemedState.stage);
+}
+
+function exportRedeemedExcel(stage) {
+    const q = encodeURIComponent(redeemedState.search || '');
+    const stg = stage || redeemedState.stage || 'all';
+    const url = `/api/redeemed/export?stage=${stg}&q=${q}`;
+    window.location.href = url;
 }
 
 
