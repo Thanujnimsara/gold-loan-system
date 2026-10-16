@@ -667,6 +667,13 @@
                                                     <input type="number" id="billDiscount" class="calc-input" value="0" min="0" oninput="recalculateBill()">
                                                 </div>
                                             </div>
+                                            <div class="calc-row">
+                                                <span class="calc-label">Call charges:</span>
+                                                <div class="calc-input-wrap">
+                                                    <span class="currency-prefix">Rs.</span>
+                                                    <input type="number" id="billCallCharges" class="calc-input" value="0" min="0" oninput="recalculateBill()">
+                                                </div>
+                                            </div>
 
                                             <div class="calc-row grand-total-row" style="margin-top:12px; padding:12px; background:var(--bg-elevated); border-radius:var(--radius-md); border:1px solid var(--border-gold);">
                                                 <span class="grand-label" style="font-size:15px; font-weight:700; color:var(--text-primary);">Grand Total:</span>
@@ -902,6 +909,10 @@
                         <div class="inv-sum-row" id="invDiscountRow">
                             <span>Special Discount:</span>
                             <strong id="invDiscount" style="color:#d9534f;">- Rs. 0</strong>
+                        </div>
+                        <div class="inv-sum-row" id="invCallChargesRow">
+                            <span>Call Charges:</span>
+                            <strong id="invCallCharges">Rs. 0</strong>
                         </div>
                         <div class="inv-sum-row inv-total-row">
                             <span>TOTAL AMOUNT:</span>

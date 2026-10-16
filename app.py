@@ -421,6 +421,7 @@ def init_billing_tables():
             service_charge REAL DEFAULT 0,
             interest_amount REAL DEFAULT 0,
             discount REAL DEFAULT 0,
+            call_charges REAL DEFAULT 0,
             tax_amount REAL DEFAULT 0,
             grand_total REAL NOT NULL DEFAULT 0,
             paid_amount REAL NOT NULL DEFAULT 0,
@@ -431,6 +432,10 @@ def init_billing_tables():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    try:
+        c.execute("ALTER TABLE bills ADD COLUMN call_charges REAL DEFAULT 0")
+    except Exception:
+        pass
     c.execute('''
         CREATE TABLE IF NOT EXISTS bill_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -576,8 +581,9 @@ def create_bill():
     service_charge = float(data.get('service_charge', 0) or 0)
     interest_amount = float(data.get('interest_amount', 0) or 0)
     discount = float(data.get('discount', 0) or 0)
+    call_charges = float(data.get('call_charges', 0) or 0)
     tax_amount = float(data.get('tax_amount', 0) or 0)
-    grand_total = float(data.get('grand_total', 0) or (subtotal + service_charge + interest_amount + tax_amount - discount))
+    grand_total = float(data.get('grand_total', 0) or (subtotal + service_charge + interest_amount + call_charges + tax_amount - discount))
     paid_amount = float(data.get('paid_amount', 0) or grand_total)
     balance_amount = round(paid_amount - grand_total, 2)
     
@@ -594,13 +600,13 @@ def create_bill():
         INSERT INTO bills (
             bill_no, bill_type, ticket_no, nic_no, customer_name, 
             customer_phone, customer_address, subtotal, service_charge, 
-            interest_amount, discount, tax_amount, grand_total, 
+            interest_amount, discount, call_charges, tax_amount, grand_total, 
             paid_amount, balance_amount, payment_method, notes, cashier, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
     """, (
         bill_no, bill_type, ticket_no, nic_no, customer_name,
         phone, address, subtotal, service_charge,
-        interest_amount, discount, tax_amount, grand_total,
+        interest_amount, discount, call_charges, tax_amount, grand_total,
         paid_amount, balance_amount, payment_method, notes, cashier
     ))
     
@@ -692,7 +698,7 @@ def export_bills_csv():
     c = conn.cursor()
     c.execute("""SELECT b.bill_no, b.created_at, b.customer_name, b.nic_no, b.customer_phone,
                         b.customer_address, b.ticket_no, b.subtotal, b.service_charge,
-                        b.interest_amount, b.discount, b.grand_total, b.paid_amount,
+                        b.interest_amount, b.discount, b.call_charges, b.grand_total, b.paid_amount,
                         b.balance_amount, b.payment_method, b.cashier,
                         GROUP_CONCAT(bi.article_name || ' (' || bi.karat || 'KT, ' || bi.weight || 'g)', ' | ') as articles
                  FROM bills b
@@ -707,7 +713,7 @@ def export_bills_csv():
     writer.writerow([
         'Invoice No', 'Date & Time', 'Customer Name', 'NIC Number', 'Phone',
         'Address', 'Ticket No', 'Subtotal (LKR)', 'Service Charge', 'Interest Amount',
-        'Discount', 'Grand Total (LKR)', 'Paid Amount', 'Balance', 'Payment Method', 'Cashier', 'Gold Articles'
+        'Discount', 'Call Charges', 'Grand Total (LKR)', 'Paid Amount', 'Balance', 'Payment Method', 'Cashier', 'Gold Articles'
     ])
     for r in rows:
         writer.writerow(list(r))

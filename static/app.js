@@ -1205,8 +1205,9 @@ function recalculateBill() {
     const serviceCharge = parseFloat(document.getElementById('billServiceCharge').value || 0);
     const interest = parseFloat(document.getElementById('billInterestAmount').value || 0);
     const discount = parseFloat(document.getElementById('billDiscount').value || 0);
+    const callCharges = parseFloat(document.getElementById('billCallCharges') ? document.getElementById('billCallCharges').value || 0 : 0);
 
-    const grandTotal = Math.max(0, subtotal + serviceCharge + interest - discount);
+    const grandTotal = Math.max(0, subtotal + serviceCharge + interest + callCharges - discount);
 
     document.getElementById('billSubtotalDisplay').textContent = `Rs. ${formatMoney(subtotal)}`;
     document.getElementById('billGrandTotalDisplay').textContent = `Rs. ${formatMoney(grandTotal)}`;
@@ -1245,6 +1246,7 @@ function resetEntireBill() {
     document.getElementById('billServiceCharge').value = '0';
     document.getElementById('billInterestAmount').value = '0';
     document.getElementById('billDiscount').value = '0';
+    if (document.getElementById('billCallCharges')) document.getElementById('billCallCharges').value = '0';
     document.getElementById('billPaidAmount').value = '';
     document.getElementById('billNotes').value = '';
     renderBillItems();
@@ -1277,7 +1279,8 @@ async function processBillSubmission(printAfter) {
     const serviceCharge = parseFloat(document.getElementById('billServiceCharge').value || 0);
     const interest = parseFloat(document.getElementById('billInterestAmount').value || 0);
     const discount = parseFloat(document.getElementById('billDiscount').value || 0);
-    const grandTotal = Math.max(0, subtotal + serviceCharge + interest - discount);
+    const callCharges = parseFloat(document.getElementById('billCallCharges') ? document.getElementById('billCallCharges').value || 0 : 0);
+    const grandTotal = Math.max(0, subtotal + serviceCharge + interest + callCharges - discount);
 
     const paidInputVal = document.getElementById('billPaidAmount').value;
     const paidAmount = paidInputVal !== '' ? parseFloat(paidInputVal) : grandTotal;
@@ -1293,6 +1296,7 @@ async function processBillSubmission(printAfter) {
         service_charge: serviceCharge,
         interest_amount: interest,
         discount: discount,
+        call_charges: callCharges,
         grand_total: grandTotal,
         paid_amount: paidAmount,
         payment_method: document.getElementById('billPaymentMethod').value || 'Cash',
@@ -1329,6 +1333,7 @@ async function processBillSubmission(printAfter) {
         document.getElementById('billServiceCharge').value = '0';
         document.getElementById('billInterestAmount').value = '0';
         document.getElementById('billDiscount').value = '0';
+        if (document.getElementById('billCallCharges')) document.getElementById('billCallCharges').value = '0';
         document.getElementById('billPaidAmount').value = '';
         document.getElementById('billNotes').value = '';
         renderBillItems();
@@ -1396,6 +1401,16 @@ function showInvoiceModal(bill, autoPrint = false) {
         document.getElementById('invDiscount').textContent = `- Rs. ${formatMoney(bill.discount)}`;
     } else {
         discRow.style.display = 'none';
+    }
+
+    const callRow = document.getElementById('invCallChargesRow');
+    if (bill.call_charges > 0) {
+        if (callRow) {
+            callRow.style.display = 'flex';
+            document.getElementById('invCallCharges').textContent = `Rs. ${formatMoney(bill.call_charges)}`;
+        }
+    } else {
+        if (callRow) callRow.style.display = 'none';
     }
 
     document.getElementById('invGrandTotal').textContent = `Rs. ${formatMoney(bill.grand_total)}`;
