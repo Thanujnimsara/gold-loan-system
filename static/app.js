@@ -405,7 +405,10 @@ async function openLoanDetail(ticketNo) {
     document.getElementById('detail-title').textContent = 'Loan Details';
     document.getElementById('detail-subtitle').textContent = ticketNo;
 
-    const data = await apiGet(`/api/loan/${encodeURIComponent(ticketNo)}`);
+    let data = await apiGet(`/api/loan?ticket=${encodeURIComponent(ticketNo)}`);
+    if (!data || data.error) {
+        data = await apiGet(`/api/loan/${encodeURIComponent(ticketNo)}`);
+    }
     if (!data || data.error) {
         body.innerHTML = '<div class="empty-state"><div class="empty-state-icon">❌</div><div class="empty-state-text">Loan not found</div></div>';
         return;

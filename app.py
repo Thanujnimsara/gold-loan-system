@@ -232,21 +232,39 @@ def customer_detail(nic):
 
 # ==================== LOAN DETAILS ====================
 
+@app.route('/api/loan')
 @app.route('/api/loan/<path:ticket_no>')
-def loan_detail(ticket_no):
+def loan_detail(ticket_no=None):
     """Get full loan details by ticket number."""
+    if not ticket_no:
+        ticket_no = request.args.get('ticket') or request.args.get('ticket_no') or request.args.get('t')
+    if not ticket_no:
+        return jsonify({'error': 'Ticket number is required'}), 400
+        
     conn = get_db()
     c = conn.cursor()
     
-    c.execute("SELECT * FROM loans WHERE ticket_no = ?", (ticket_no,))
+    ticket_clean = ticket_no.strip()
+    c.execute("SELECT * FROM loans WHERE ticket_no = ? OR ticket_no = ?", (ticket_no, ticket_clean))
     loan = dict_from_row(c.fetchone())
+    
+    if not loan:
+        c.execute("SELECT * FROM loans WHERE UPPER(ticket_no) = UPPER(?)", (ticket_clean,))
+        loan = dict_from_row(c.fetchone())
+        
+    if not loan:
+        c.execute("SELECT * FROM loans WHERE ticket_no LIKE ?", (f"%{ticket_clean}%",))
+        loan = dict_from_row(c.fetchone())
     
     if not loan:
         conn.close()
         return jsonify({'error': 'Loan not found'}), 404
     
+    # Use exact ticket_no from database row
+    db_ticket = loan['ticket_no']
+    
     # Get articles
-    c.execute("SELECT * FROM articles WHERE ticket_no = ?", (ticket_no,))
+    c.execute("SELECT * FROM articles WHERE ticket_no = ?", (db_ticket,))
     loan['articles'] = [dict(row) for row in c.fetchall()]
     
     # Get other loans for same customer
