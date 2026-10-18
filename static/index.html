@@ -516,7 +516,10 @@
                                 <div class="card billing-card">
                                     <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
                                         <div class="card-title">1. Customer & Loan Selection</div>
-                                        <button type="button" class="btn-text-gold" onclick="resetCustomerSelection()" style="font-size:12px; cursor:pointer; background:none; border:none; color:var(--text-gold);">✕ Clear</butto                                         <!-- Instant Search Bar for Customer -->
+                                        <button type="button" class="btn-text-gold" onclick="resetCustomerSelection()" style="font-size:12px; cursor:pointer; background:none; border:none; color:var(--text-gold);">✕ Clear</button>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Instant Search Bar for Customer -->
                                         <div class="input-group" id="billCustomerSearchBox" style="position:relative; margin-bottom:14px;">
                                             <label class="input-label">Search Customer by NIC or Ticket No</label>
                                             <div style="display:flex; gap:8px;">
@@ -535,8 +538,6 @@
                                             <div class="input-group">
                                                 <label class="input-label">NIC Number</label>
                                                 <input type="text" id="billCustomerNic" class="custom-input" placeholder="e.g. 198512345678 or 723442834V" oninput="handleNicAutoFill(this.value)" onblur="handleNicAutoFill(this.value)">
-                                            </div>
-                                        </div>442834V">
                                             </div>
                                         </div>
                                         <div class="form-row-2">
