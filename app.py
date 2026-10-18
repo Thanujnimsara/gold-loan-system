@@ -11,10 +11,12 @@ import csv
 import io
 from datetime import datetime
 
-app = Flask(__name__, static_folder='static')
-CORS(app)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, 'static')
+DB_PATH = os.path.join(BASE_DIR, 'goldloan.db')
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'goldloan.db')
+app = Flask(__name__, static_folder=STATIC_DIR)
+CORS(app)
 
 
 def get_db():
@@ -31,12 +33,12 @@ def dict_from_row(row):
  
 @app.route('/')
 def index():
-    return send_from_directory('static', 'index.html')
+    return send_from_directory(STATIC_DIR, 'index.html')
 
 
 @app.route('/<path:path>')
 def static_files(path):
-    return send_from_directory('static', path)
+    return send_from_directory(STATIC_DIR, path)
 
 
 # ==================== DASHBOARD STATS ====================
