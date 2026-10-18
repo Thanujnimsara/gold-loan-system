@@ -610,9 +610,56 @@
                                     </div>
                                     <div class="card-body">
                                         <div class="form-row-4" style="grid-template-columns: 1.6fr 0.9fr 1fr 1.2fr; gap:12px;">
-                                            <div class="input-group">
-                                                <label class="input-label" style="white-space:nowrap;">💍 Article Name</label>
-                                                <input type="text" id="customArticleName" class="custom-input" placeholder="e.g. Gold Necklace, Ring" value="Gold Article">
+                                            <div class="input-group" style="position:relative;">
+                                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                                    <label class="input-label" style="white-space:nowrap;">💍 Article Name</label>
+                                                </div>
+                                                <div style="position:relative; display:flex; align-items:center;">
+                                                    <input type="text" id="customArticleName" class="custom-input" list="articleNameList" placeholder="Type or select Article..." value="BANGLE" autocomplete="off" oninput="filterArticleDropdown(this.value)" onfocus="showArticleDropdown()" style="padding-right:32px; font-weight:600;">
+                                                    <button type="button" onclick="toggleArticleDropdown(event)" style="position:absolute; right:10px; background:none; border:none; color:var(--text-gold); cursor:pointer; font-size:12px; padding:4px; display:flex; align-items:center; justify-content:center;" title="Click to view all articles">
+                                                        ▼
+                                                    </button>
+                                                    <datalist id="articleNameList">
+                                                        <option value="BANGLE"></option>
+                                                        <option value="BOX CHAIN"></option>
+                                                        <option value="BRACELAT"></option>
+                                                        <option value="BRACELET"></option>
+                                                        <option value="BRACELET With Pendant"></option>
+                                                        <option value="CHAIN"></option>
+                                                        <option value="CHAIN (BOX)"></option>
+                                                        <option value="CHAIN (DIAMOND)"></option>
+                                                        <option value="CHAIN (DIAMOND) WITH A PENDANT"></option>
+                                                        <option value="CHAIN (LINK)"></option>
+                                                        <option value="CHAIN (MACHINE CUT)"></option>
+                                                        <option value="CHAIN (MACHINE CUT) WITH A PENDANT"></option>
+                                                        <option value="CHAIN (SP)"></option>
+                                                        <option value="Chain with pendant"></option>
+                                                        <option value="Chain with S/Pendant"></option>
+                                                        <option value="Chain with Stone pendant"></option>
+                                                        <option value="Chain-Machine Cut"></option>
+                                                        <option value="Coin Pendant"></option>
+                                                        <option value="D/CHAIN"></option>
+                                                        <option value="Diamond Chain"></option>
+                                                        <option value="EARING"></option>
+                                                        <option value="EARRING"></option>
+                                                        <option value="EARRINGS"></option>
+                                                        <option value="GYPSYS"></option>
+                                                        <option value="GYPSYS With Tussel"></option>
+                                                        <option value="GYPSYS WITH TUSSELS"></option>
+                                                        <option value="MULTY"></option>
+                                                        <option value="NECKLAS With Tussels"></option>
+                                                        <option value="PANCHAYUDA"></option>
+                                                        <option value="PENDANT"></option>
+                                                        <option value="PENDANT (SURA)"></option>
+                                                        <option value="PENDENT"></option>
+                                                        <option value="RING"></option>
+                                                        <option value="RING (STONE)"></option>
+                                                        <option value="S/EARRINGS/pendant"></option>
+                                                        <option value="S/Ring"></option>
+                                                        <option value="SP CHAIN"></option>
+                                                    </datalist>
+                                                </div>
+                                                <div id="articleCustomDropdown" class="billing-search-dropdown" style="max-height:240px; overflow-y:auto; display:none; z-index:100; box-shadow:0 8px 24px rgba(0,0,0,0.6); border:1px solid rgba(234,179,8,0.3); border-radius:8px; margin-top:4px;"></div>
                                             </div>
                                             <div class="input-group">
                                                 <label class="input-label" style="white-space:nowrap;">💎 Karat (KT)</label>

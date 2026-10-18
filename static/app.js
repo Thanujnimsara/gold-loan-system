@@ -1268,6 +1268,114 @@ function addLoanArticleToBill(index) {
     renderBillItems();
 }
 
+// ----------------- Standard Article Names Autocomplete & Dropdown -----------------
+
+const STANDARD_ARTICLE_NAMES = [
+    "BANGLE",
+    "BOX CHAIN",
+    "BRACELAT",
+    "BRACELET",
+    "BRACELET With Pendant",
+    "CHAIN",
+    "CHAIN (BOX)",
+    "CHAIN (DIAMOND)",
+    "CHAIN (DIAMOND) WITH A PENDANT",
+    "CHAIN (LINK)",
+    "CHAIN (MACHINE CUT)",
+    "CHAIN (MACHINE CUT) WITH A PENDANT",
+    "CHAIN (SP)",
+    "Chain with pendant",
+    "Chain with S/Pendant",
+    "Chain with Stone pendant",
+    "Chain-Machine Cut",
+    "Coin Pendant",
+    "D/CHAIN",
+    "Diamond Chain",
+    "EARING",
+    "EARRING",
+    "EARRINGS",
+    "GYPSYS",
+    "GYPSYS With Tussel",
+    "GYPSYS WITH TUSSELS",
+    "MULTY",
+    "NECKLAS With Tussels",
+    "PANCHAYUDA",
+    "PENDANT",
+    "PENDANT (SURA)",
+    "PENDENT",
+    "RING",
+    "RING (STONE)",
+    "S/EARRINGS/pendant",
+    "S/Ring",
+    "SP CHAIN"
+];
+
+function showArticleDropdown() {
+    renderArticleDropdown(document.getElementById('customArticleName').value || '');
+}
+
+function toggleArticleDropdown(e) {
+    if (e) {
+        e.stopPropagation();
+        e.preventDefault();
+    }
+    const dd = document.getElementById('articleCustomDropdown');
+    if (!dd) return;
+    if (dd.style.display === 'block') {
+        dd.style.display = 'none';
+    } else {
+        renderArticleDropdown('');
+        dd.style.display = 'block';
+    }
+}
+
+function filterArticleDropdown(query) {
+    renderArticleDropdown(query);
+}
+
+function renderArticleDropdown(query) {
+    const dd = document.getElementById('articleCustomDropdown');
+    if (!dd) return;
+    const q = (query || '').toLowerCase().trim();
+    const filtered = STANDARD_ARTICLE_NAMES.filter(item => !q || item.toLowerCase().includes(q));
+
+    if (!filtered.length) {
+        dd.innerHTML = '<div style="padding:10px 14px; font-size:12px; color:var(--text-muted); text-align:center;">No match found (type manual name)</div>';
+    } else {
+        dd.innerHTML = filtered.map(name => {
+            const escaped = name.replace(/'/g, "\\'");
+            return `
+                <div class="search-dropdown-item" onclick="selectStandardArticle('${escaped}')" style="padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.04); display:flex; justify-content:space-between; align-items:center; transition:background 0.15s;">
+                    <span style="color:var(--text-primary);">💍 ${name}</span>
+                    <span style="font-size:10px; color:var(--text-gold); background:rgba(234,179,8,0.12); padding:2px 8px; border-radius:4px; font-weight:700;">Select</span>
+                </div>
+            `;
+        }).join('');
+    }
+    dd.style.display = 'block';
+}
+
+function selectStandardArticle(name) {
+    const input = document.getElementById('customArticleName');
+    if (input) {
+        input.value = name;
+        input.focus();
+    }
+    const dd = document.getElementById('articleCustomDropdown');
+    if (dd) dd.style.display = 'none';
+}
+
+// Global click listener to close article dropdown
+document.addEventListener('click', (e) => {
+    const dd = document.getElementById('articleCustomDropdown');
+    const input = document.getElementById('customArticleName');
+    if (dd && dd.style.display === 'block') {
+        if (!dd.contains(e.target) && e.target !== input) {
+            dd.style.display = 'none';
+        }
+    }
+});
+
 function updateCustomRateByKarat() {
     const kInput = document.getElementById('customArticleKarat');
     const karat = parseFloat(kInput ? kInput.value : 22) || 22;
