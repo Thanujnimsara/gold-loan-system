@@ -919,13 +919,125 @@ function switchBillingTab(tab) {
     billingState.activeTab = tab;
     document.getElementById('tabNewBill').classList.toggle('active', tab === 'new');
     document.getElementById('tabHistory').classList.toggle('active', tab === 'history');
+    const tabDaily = document.getElementById('tabDailyReport');
+    if (tabDaily) tabDaily.classList.toggle('active', tab === 'daily');
     
     document.getElementById('billingNewSection').style.display = tab === 'new' ? 'block' : 'none';
     document.getElementById('billingHistorySection').style.display = tab === 'history' ? 'block' : 'none';
+    const dailySec = document.getElementById('billingDailySection');
+    if (dailySec) dailySec.style.display = tab === 'daily' ? 'block' : 'none';
 
     if (tab === 'history') {
         loadBillingHistory();
+    } else if (tab === 'daily') {
+        loadDailySalesReport();
     }
+}
+
+// ----------------- Daily Sales Report -----------------
+
+function getTodayIsoString() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function setDailyReportToday() {
+    const picker = document.getElementById('dailyReportDatePicker');
+    if (picker) {
+        picker.value = getTodayIsoString();
+        loadDailySalesReport();
+    }
+}
+
+function setDailyReportYesterday() {
+    const picker = document.getElementById('dailyReportDatePicker');
+    if (picker) {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        picker.value = `${y}-${m}-${day}`;
+        loadDailySalesReport();
+    }
+}
+
+async function loadDailySalesReport() {
+    const picker = document.getElementById('dailyReportDatePicker');
+    if (picker && !picker.value) {
+        picker.value = getTodayIsoString();
+    }
+    const dateVal = picker && picker.value ? picker.value : getTodayIsoString();
+    const subTitle = document.getElementById('dailySalesTableSubtitle');
+    if (subTitle) subTitle.textContent = `Showing all bills created on ${dateVal}`;
+
+    const tbody = document.getElementById('dailySalesTableBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:30px;">Loading daily sales data...</td></tr>';
+
+    try {
+        const data = await apiGet(`/api/reports/daily-sales?date=${encodeURIComponent(dateVal)}`);
+        if (!data || !data.summary) {
+            if (tbody) tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:30px; color:var(--text-muted);">Failed to load daily report.</td></tr>';
+            return;
+        }
+
+        const sum = data.summary;
+        const setTxt = (id, txt) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = txt;
+        };
+
+        setTxt('dailyTotalInvoices', sum.total_bills || 0);
+        setTxt('dailyTotalWeight', `${(sum.total_weight || 0).toFixed(2)} g gold sold`);
+        setTxt('dailyTotalSales', `Rs. ${formatMoney(sum.total_sales || 0)}`);
+        setTxt('dailySubtotal', `Subtotal: Rs. ${formatMoney(sum.total_subtotal || 0)}`);
+        setTxt('dailyCallCharges', `Rs. ${formatMoney(sum.total_call_charges || 0)}`);
+        setTxt('dailyDiscount', `Rs. ${formatMoney(sum.total_discount || 0)}`);
+        setTxt('dailyCashCollected', `Rs. ${formatMoney(sum.total_paid || 0)}`);
+
+        const bills = data.bills || [];
+        if (!bills.length) {
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:35px; color:var(--text-secondary);">
+                No invoices recorded on <strong>${dateVal}</strong>.
+            </td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = bills.map(b => {
+            const timeStr = b.created_at ? (b.created_at.includes(' ') ? b.created_at.split(' ')[1] : b.created_at) : '-';
+            return `
+                <tr>
+                    <td style="font-family:monospace; font-weight:700; color:var(--text-gold);">${b.bill_no}</td>
+                    <td>${timeStr}</td>
+                    <td style="font-weight:600; color:var(--text-primary);">${b.customer_name || '-'}</td>
+                    <td style="font-family:monospace; font-size:12px;">${b.nic_no || '-'}</td>
+                    <td style="font-family:monospace; font-size:12px; color:var(--text-secondary);">${b.ticket_no || '-'}</td>
+                    <td style="font-size:12px; max-width:180px; white-space:normal;">${b.articles_summary || '-'}</td>
+                    <td class="money">Rs. ${formatMoney(b.subtotal)}</td>
+                    <td class="money" style="color:var(--text-gold);">${b.call_charges ? 'Rs. ' + formatMoney(b.call_charges) : '-'}</td>
+                    <td class="money" style="color:#ef4444;">${b.discount ? '- Rs. ' + formatMoney(b.discount) : '-'}</td>
+                    <td class="money" style="font-weight:700; color:#10b981;">Rs. ${formatMoney(b.grand_total)}</td>
+                    <td><span class="status-badge status-active" style="font-size:11px;">${b.payment_method || 'Cash'}</span></td>
+                    <td>
+                        <button type="button" class="btn btn-secondary" onclick="viewBillDetails('${b.bill_no}')" style="padding:4px 8px; font-size:11px;">
+                            👁️ View
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (e) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; color:#ef4444; padding:30px;">Error: ${e.message}</td></tr>`;
+    }
+}
+
+function downloadDailySalesExcel() {
+    const picker = document.getElementById('dailyReportDatePicker');
+    const dateVal = picker && picker.value ? picker.value : getTodayIsoString();
+    window.location.href = `/api/reports/daily-sales/export?date=${encodeURIComponent(dateVal)}`;
 }
 
 async function loadBillingHistoryCount() {
@@ -940,12 +1052,17 @@ async function loadBillingHistoryCount() {
 
 let billingSearchDebounceTimer = null;
 function handleBillingSearch(immediate = false) {
-    const query = (document.getElementById('billCustomerSearchInput').value || '').trim();
+    const sInput = document.getElementById('billCustomerSearchInput');
+    const rawVal = sInput ? sInput.value : '';
+    const query = rawVal.trim();
     const dropdown = document.getElementById('billingSearchDropdown');
 
-    if (!query || query.length < 2) {
-        dropdown.classList.remove('visible');
-        dropdown.innerHTML = '';
+    // If query is empty or just the prefix, don't popup "No matching found"
+    if (!query || query === 'L/PW/UH/' || query === 'L/PW/UH' || query.length < 2) {
+        if (dropdown) {
+            dropdown.classList.remove('visible');
+            dropdown.innerHTML = '';
+        }
         return;
     }
 
@@ -958,6 +1075,13 @@ function handleBillingSearch(immediate = false) {
         const data = await apiGet(`/api/billing/customer-search?q=${encodeURIComponent(query)}`);
         if (!data || !data.results || !data.results.length) {
             dropdown.innerHTML = '<div style="padding:12px; color:var(--text-muted); text-align:center;">No matching customer or ticket found. You can enter details manually below.</div>';
+            return;
+        }
+
+        // If user pressed Enter and there is only 1 match, auto-fill immediately!
+        if (immediate && data.results.length === 1) {
+            window._lastBillingSearchResults = data.results;
+            selectLoanForBillingByIndex(0);
             return;
         }
 
@@ -990,6 +1114,33 @@ function handleBillingSearch(immediate = false) {
     } else {
         billingSearchDebounceTimer = setTimeout(performSearch, 300);
     }
+}
+
+let nicAutoFillDebounce = null;
+async function handleNicAutoFill(nic) {
+    if (!nic) return;
+    nic = nic.trim();
+    if (nic.length < 9) return;
+    
+    if (nicAutoFillDebounce) clearTimeout(nicAutoFillDebounce);
+    nicAutoFillDebounce = setTimeout(async () => {
+        try {
+            const data = await apiGet(`/api/billing/customer-search?q=${encodeURIComponent(nic)}`);
+            if (data && data.results && data.results.length > 0) {
+                const match = data.results.find(r => r.nic_no && r.nic_no.toLowerCase() === nic.toLowerCase()) || data.results[0];
+                if (match) {
+                    const nameEl = document.getElementById('billCustomerName');
+                    const phoneEl = document.getElementById('billCustomerPhone');
+                    const addrEl = document.getElementById('billCustomerAddress');
+                    const ticketEl = document.getElementById('billTicketNo');
+                    if (nameEl && !nameEl.value) nameEl.value = match.name || '';
+                    if (phoneEl && !phoneEl.value) phoneEl.value = match.mobile_no || '';
+                    if (addrEl && !addrEl.value) addrEl.value = [match.address1, match.address2, match.address3].filter(Boolean).join(', ') || '';
+                    if (ticketEl && !ticketEl.value && match.ticket_no) ticketEl.value = match.ticket_no;
+                }
+            }
+        } catch(e) {}
+    }, 350);
 }
 
 function selectLoanForBillingByIndex(idx) {
@@ -1080,7 +1231,7 @@ async function loadLoanIntoBilling(ticketNo) {
 function resetCustomerSelection() {
     billingState.currentCustomer = null;
     billingState.loanArticles = [];
-    document.getElementById('billCustomerSearchInput').value = '';
+    document.getElementById('billCustomerSearchInput').value = 'L/PW/UH/';
     document.getElementById('billCustomerName').value = '';
     document.getElementById('billCustomerNic').value = '';
     document.getElementById('billCustomerPhone').value = '';
@@ -1088,7 +1239,11 @@ function resetCustomerSelection() {
     document.getElementById('billTicketNo').value = '';
     document.getElementById('loanArticlesCard').style.display = 'none';
     document.getElementById('loanRedeemToggleRow').style.display = 'none';
-    document.getElementById('billingSearchDropdown').classList.remove('visible');
+    const dd = document.getElementById('billingSearchDropdown');
+    if (dd) {
+        dd.classList.remove('visible');
+        dd.innerHTML = '';
+    }
 }
 
 // ----------------- Article Add / Remove / Calculate -----------------
@@ -1114,9 +1269,16 @@ function addLoanArticleToBill(index) {
 }
 
 function updateCustomRateByKarat() {
-    const karat = parseInt(document.getElementById('customArticleKarat').value || 22);
-    const rate = billingState.liveRates[karat] || 43000;
-    document.getElementById('customArticleRate').value = rate;
+    const kInput = document.getElementById('customArticleKarat');
+    const karat = parseFloat(kInput ? kInput.value : 22) || 22;
+    const rounded = Math.round(karat);
+    let rate = billingState.liveRates[rounded];
+    if (!rate) {
+        const base22 = billingState.liveRates[22] || 43000;
+        rate = Math.round((base22 / 22) * karat);
+    }
+    const rateEl = document.getElementById('customArticleRate');
+    if (rateEl) rateEl.value = rate || 43000;
     calculateCustomItemPrice();
 }
 
@@ -1130,7 +1292,7 @@ function calculateCustomItemPrice() {
 
 function addCustomItemToBill() {
     const name = (document.getElementById('customArticleName').value || '').trim() || 'Custom Gold Article';
-    const karat = parseInt(document.getElementById('customArticleKarat').value || 22);
+    const karat = parseFloat(document.getElementById('customArticleKarat').value || 22);
     const weight = parseFloat(document.getElementById('customArticleWeight').value || 0);
     const rate = parseFloat(document.getElementById('customArticleRate').value || 0);
 

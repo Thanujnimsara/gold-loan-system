@@ -715,6 +715,7 @@ def export_bills_csv():
     conn.close()
     
     output = io.StringIO()
+    output.write('\ufeff')
     writer = csv.writer(output)
     writer.writerow([
         'Invoice No', 'Date & Time', 'Customer Name', 'NIC Number', 'Phone',
@@ -726,8 +727,162 @@ def export_bills_csv():
         
     return Response(
         output.getvalue(),
-        mimetype="text/csv",
+        mimetype="text/csv; charset=utf-8",
         headers={"Content-Disposition": "attachment;filename=GoldLoan_Invoices_Export.csv"}
+    )
+
+
+# ==================== DAILY SALES REPORT ====================
+
+@app.route('/api/reports/daily-sales')
+def daily_sales_report():
+    """Fetch sales and collections report for a specific date."""
+    target_date = request.args.get('date', '').strip()
+    if not target_date:
+        target_date = datetime.now().strftime('%Y-%m-%d')
+        
+    conn = get_db()
+    c = conn.cursor()
+    
+    # 1. Fetch all bills created on the target date
+    c.execute("""
+        SELECT b.*,
+               COALESCE((SELECT COUNT(*) FROM bill_items WHERE bill_id = b.id), 0) as item_count,
+               COALESCE((SELECT SUM(weight) FROM bill_items WHERE bill_id = b.id), 0) as total_weight,
+               (SELECT GROUP_CONCAT(article_name || ' (' || karat || 'KT, ' || weight || 'g)', ', ') 
+                FROM bill_items WHERE bill_id = b.id) as articles_summary
+        FROM bills b
+        WHERE date(b.created_at) = ?
+        ORDER BY b.created_at DESC
+    """, (target_date,))
+    
+    bills = [dict(row) for row in c.fetchall()]
+    
+    total_bills = len(bills)
+    total_sales = sum(float(b.get('grand_total') or 0) for b in bills)
+    total_subtotal = sum(float(b.get('subtotal') or 0) for b in bills)
+    total_discount = sum(float(b.get('discount') or 0) for b in bills)
+    total_call_charges = sum(float(b.get('call_charges') or 0) for b in bills)
+    total_paid = sum(float(b.get('paid_amount') or 0) for b in bills)
+    total_weight = sum(float(b.get('total_weight') or 0) for b in bills)
+    
+    # 2. Also fetch loans disbursed today (pawned on target_date)
+    c.execute("""
+        SELECT COUNT(*) as count, COALESCE(SUM(grand_advance), 0) as total_advance
+        FROM loans
+        WHERE pawned_date = ?
+    """, (target_date,))
+    pawned_row = c.fetchone()
+    loans_disbursed_count = pawned_row[0] if pawned_row else 0
+    loans_disbursed_advance = pawned_row[1] if pawned_row else 0
+    
+    # 3. Also fetch loans redeemed today (redeemed on target_date)
+    c.execute("""
+        SELECT COUNT(*) as count, COALESCE(SUM(redeemed_amount), 0) as total_redeemed
+        FROM loans
+        WHERE redeemed_date = ?
+    """, (target_date,))
+    redeemed_row = c.fetchone()
+    loans_redeemed_count = redeemed_row[0] if redeemed_row else 0
+    loans_redeemed_amount = redeemed_row[1] if redeemed_row else 0
+    
+    conn.close()
+    
+    return jsonify({
+        'date': target_date,
+        'summary': {
+            'total_bills': total_bills,
+            'total_sales': round(total_sales, 2),
+            'total_subtotal': round(total_subtotal, 2),
+            'total_discount': round(total_discount, 2),
+            'total_call_charges': round(total_call_charges, 2),
+            'total_paid': round(total_paid, 2),
+            'total_weight': round(total_weight, 2),
+            'loans_disbursed_count': loans_disbursed_count,
+            'loans_disbursed_advance': round(loans_disbursed_advance, 2),
+            'loans_redeemed_count': loans_redeemed_count,
+            'loans_redeemed_amount': round(loans_redeemed_amount, 2)
+        },
+        'bills': bills
+    })
+
+
+@app.route('/api/reports/daily-sales/export')
+def export_daily_sales_excel():
+    """Download Daily Sales Report as Excel-compatible CSV."""
+    target_date = request.args.get('date', '').strip()
+    if not target_date:
+        target_date = datetime.now().strftime('%Y-%m-%d')
+        
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("""
+        SELECT b.bill_no,
+               time(b.created_at) as bill_time,
+               b.customer_name,
+               b.nic_no,
+               b.customer_phone,
+               b.ticket_no,
+               (SELECT GROUP_CONCAT(article_name || ' (' || karat || 'KT, ' || weight || 'g)', ' | ') 
+                FROM bill_items WHERE bill_id = b.id) as articles,
+               COALESCE((SELECT SUM(weight) FROM bill_items WHERE bill_id = b.id), 0) as total_weight,
+               b.subtotal,
+               b.service_charge,
+               b.interest_amount,
+               b.call_charges,
+               b.discount,
+               b.grand_total,
+               b.paid_amount,
+               b.balance_amount,
+               b.payment_method,
+               b.cashier
+        FROM bills b
+        WHERE date(b.created_at) = ?
+        ORDER BY b.created_at ASC
+    """, (target_date,))
+    
+    rows = c.fetchall()
+    
+    output = io.StringIO()
+    output.write('\ufeff')  # UTF-8 BOM for Microsoft Excel
+    writer = csv.writer(output)
+    
+    writer.writerow(['GLOBAL STANFORD GOLD LOAN - DAILY SALES & INVOICE REPORT'])
+    writer.writerow(['Report Date', target_date, 'Generated At', datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
+    writer.writerow([])
+    
+    total_sales = sum(float(r['grand_total'] or 0) for r in rows)
+    total_call = sum(float(r['call_charges'] or 0) for r in rows)
+    total_disc = sum(float(r['discount'] or 0) for r in rows)
+    total_paid = sum(float(r['paid_amount'] or 0) for r in rows)
+    total_wt = sum(float(r['total_weight'] or 0) for r in rows)
+    
+    writer.writerow(['SUMMARY STATISTICS'])
+    writer.writerow(['Total Invoices Issued', len(rows)])
+    writer.writerow(['Total Sales (Grand Total)', f"Rs. {total_sales:,.2f}"])
+    writer.writerow(['Total Call Charges Collected', f"Rs. {total_call:,.2f}"])
+    writer.writerow(['Total Discounts Given', f"Rs. {total_disc:,.2f}"])
+    writer.writerow(['Total Cash / Payments Collected', f"Rs. {total_paid:,.2f}"])
+    writer.writerow(['Total Gold Weight Sold (g)', f"{total_wt:.2f} g"])
+    writer.writerow([])
+    
+    writer.writerow([
+        'Invoice No', 'Time', 'Customer Name', 'NIC Number', 'Phone',
+        'Ticket Ref', 'Gold Articles Detail', 'Total Weight (g)',
+        'Subtotal (LKR)', 'Service Charge', 'Interest Amount', 'Call Charges',
+        'Discount', 'Grand Total (LKR)', 'Paid Amount', 'Balance', 'Payment Method', 'Cashier'
+    ])
+    
+    for r in rows:
+        writer.writerow(list(r))
+        
+    conn.close()
+    
+    filename = f"Daily_Sales_Report_{target_date}.csv"
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment;filename={filename}"}
     )
 
 

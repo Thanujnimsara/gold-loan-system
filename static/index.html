@@ -69,6 +69,10 @@
                 </div>
                 <div class="nav-section">
                     <div class="nav-section-title">Quick Access</div>
+                    <div class="nav-item" onclick="navigate('billing'); switchBillingTab('daily');">
+                        <span class="nav-icon">📊</span>
+                        Daily Sales Report
+                    </div>
                     <div class="nav-item" onclick="focusSearch('nic')">
                         <span class="nav-icon">🔍</span>
                         Search by NIC
@@ -497,6 +501,9 @@
                             <button class="tab-btn" id="tabHistory" onclick="switchBillingTab('history')">
                                 📜 Invoice History (<span id="billingHistoryCount">0</span>)
                             </button>
+                            <button class="tab-btn" id="tabDailyReport" onclick="switchBillingTab('daily')">
+                                📊 Daily Sales Report
+                            </button>
                         </div>
                     </div>
 
@@ -509,14 +516,11 @@
                                 <div class="card billing-card">
                                     <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
                                         <div class="card-title">1. Customer & Loan Selection</div>
-                                        <button type="button" class="btn-text-gold" onclick="resetCustomerSelection()" style="font-size:12px; cursor:pointer; background:none; border:none; color:var(--text-gold);">✕ Clear</button>
-                                    </div>
-                                    <div class="card-body">
-                                        <!-- Instant Search Bar for Customer -->
+                                        <button type="button" class="btn-text-gold" onclick="resetCustomerSelection()" style="font-size:12px; cursor:pointer; background:none; border:none; color:var(--text-gold);">✕ Clear</butto                                         <!-- Instant Search Bar for Customer -->
                                         <div class="input-group" id="billCustomerSearchBox" style="position:relative; margin-bottom:14px;">
                                             <label class="input-label">Search Customer by NIC or Ticket No</label>
                                             <div style="display:flex; gap:8px;">
-                                                <input type="text" id="billCustomerSearchInput" class="custom-input" placeholder="Type NIC (e.g. 723442834V) or Ticket (e.g. L/PW/UH/000001)..." oninput="handleBillingSearch()" onkeydown="if(event.key==='Enter'){handleBillingSearch(true);}" autocomplete="off">
+                                                <input type="text" id="billCustomerSearchInput" class="custom-input" value="L/PW/UH/" placeholder="Type Ticket No (e.g. L/PW/UH/000001) or NIC..." oninput="handleBillingSearch()" onkeydown="if(event.key==='Enter'){handleBillingSearch(true);}" onfocus="if(!this.value){this.value='L/PW/UH/';}" autocomplete="off">
                                                 <button type="button" class="btn btn-secondary" onclick="handleBillingSearch(true)" style="white-space:nowrap; padding:0 16px;">Search</button>
                                             </div>
                                             <div class="billing-search-dropdown" id="billingSearchDropdown"></div>
@@ -530,7 +534,9 @@
                                             </div>
                                             <div class="input-group">
                                                 <label class="input-label">NIC Number</label>
-                                                <input type="text" id="billCustomerNic" class="custom-input" placeholder="e.g. 198512345678 or 723442834V">
+                                                <input type="text" id="billCustomerNic" class="custom-input" placeholder="e.g. 198512345678 or 723442834V" oninput="handleNicAutoFill(this.value)" onblur="handleNicAutoFill(this.value)">
+                                            </div>
+                                        </div>442834V">
                                             </div>
                                         </div>
                                         <div class="form-row-2">
@@ -588,14 +594,15 @@
                                                 <input type="text" id="customArticleName" class="custom-input" placeholder="e.g. Gold Necklace, Ring" value="Gold Article">
                                             </div>
                                             <div class="input-group">
-                                                <label class="input-label">Karat</label>
-                                                <select id="customArticleKarat" class="custom-input" onchange="updateCustomRateByKarat()">
+                                                <label class="input-label">Karat (Manual Entry)</label>
+                                                <input type="number" id="customArticleKarat" class="custom-input" list="karatQuickList" min="1" max="24" step="any" value="22" placeholder="e.g. 22" oninput="updateCustomRateByKarat()">
+                                                <datalist id="karatQuickList">
                                                     <option value="24">24 Karat (99.9%)</option>
-                                                    <option value="22" selected>22 Karat (91.6%)</option>
+                                                    <option value="22">22 Karat (91.6%)</option>
                                                     <option value="21">21 Karat (87.5%)</option>
                                                     <option value="20">20 Karat (83.3%)</option>
                                                     <option value="18">18 Karat (75.0%)</option>
-                                                </select>
+                                                </datalist>
                                             </div>
                                             <div class="input-group">
                                                 <label class="input-label">Weight (g)</label>
@@ -770,6 +777,95 @@
                                 </table>
                             </div>
                             <div class="pagination-container" id="billing-pagination"></div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: DAILY SALES REPORT SECTION -->
+                    <div id="billingDailySection" style="display:none;">
+                        <div class="card" style="margin-bottom:20px;">
+                            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                                <div>
+                                    <div class="card-title" style="font-size:18px;">📊 Daily Sales & Revenue Report</div>
+                                    <div class="card-subtitle" style="font-size:13px; color:var(--text-secondary);">Summary of gold sales, loan redemptions, and collections for the day</div>
+                                </div>
+                                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                    <label style="font-size:13px; font-weight:600; color:var(--text-primary);">Date:</label>
+                                    <input type="date" id="dailyReportDatePicker" class="custom-input" style="width:160px; padding:6px 12px;" onchange="loadDailySalesReport()">
+                                    <button type="button" class="btn btn-secondary" onclick="setDailyReportToday()" style="padding:6px 12px; font-size:12px;">📅 Today</button>
+                                    <button type="button" class="btn btn-secondary" onclick="setDailyReportYesterday()" style="padding:6px 12px; font-size:12px;">⏪ Yesterday</button>
+                                    <button type="button" class="btn btn-gold" onclick="downloadDailySalesExcel()" style="display:inline-flex; align-items:center; gap:6px; padding:7px 14px; font-weight:700;">
+                                        <span>📥</span> Download Excel Sheet
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <!-- Daily KPI Cards -->
+                                <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom:24px;">
+                                    <div class="stat-card">
+                                        <div class="stat-icon" style="background:rgba(217, 119, 6, 0.15); color:var(--text-gold);">🧾</div>
+                                        <div class="stat-label">Invoices Issued</div>
+                                        <div class="stat-value" id="dailyTotalInvoices">0</div>
+                                        <div class="stat-subtext" id="dailyTotalWeight">0.00 g gold sold</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon" style="background:rgba(16, 185, 129, 0.15); color:#10b981;">💰</div>
+                                        <div class="stat-label">Total Sales (LKR)</div>
+                                        <div class="stat-value" id="dailyTotalSales" style="color:#10b981; font-size:20px;">Rs. 0</div>
+                                        <div class="stat-subtext" id="dailySubtotal">Subtotal: Rs. 0</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon" style="background:rgba(59, 130, 246, 0.15); color:#3b82f6;">📞</div>
+                                        <div class="stat-label">Call Charges</div>
+                                        <div class="stat-value" id="dailyCallCharges" style="color:#3b82f6; font-size:20px;">Rs. 0</div>
+                                        <div class="stat-subtext">Collected from customers</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon" style="background:rgba(239, 68, 68, 0.15); color:#ef4444;">🏷️</div>
+                                        <div class="stat-label">Total Discounts</div>
+                                        <div class="stat-value" id="dailyDiscount" style="color:#ef4444; font-size:20px;">Rs. 0</div>
+                                        <div class="stat-subtext">Discounts given</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon" style="background:rgba(168, 85, 247, 0.15); color:#a855f7;">💵</div>
+                                        <div class="stat-label">Cash / Payments</div>
+                                        <div class="stat-value" id="dailyCashCollected" style="color:#a855f7; font-size:20px;">Rs. 0</div>
+                                        <div class="stat-subtext">Net cash collected</div>
+                                    </div>
+                                </div>
+
+                                <!-- Invoices Table -->
+                                <div class="table-card">
+                                    <div class="table-header" style="display:flex; justify-content:space-between; align-items:center;">
+                                        <div>
+                                            <div class="table-title">Daily Sales Transactions</div>
+                                            <div class="table-subtitle" id="dailySalesTableSubtitle">Showing all bills created on selected date</div>
+                                        </div>
+                                    </div>
+                                    <div class="table-wrapper">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Invoice No</th>
+                                                    <th>Time</th>
+                                                    <th>Customer Name</th>
+                                                    <th>NIC No</th>
+                                                    <th>Ticket Ref</th>
+                                                    <th>Gold Articles & Karat</th>
+                                                    <th>Subtotal</th>
+                                                    <th>Call Charges</th>
+                                                    <th>Discount</th>
+                                                    <th>Grand Total</th>
+                                                    <th>Payment</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="dailySalesTableBody">
+                                                <tr><td colspan="12" style="text-align:center; padding:30px;">Select a date to view sales...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
