@@ -4,7 +4,10 @@ Primary Keys: NIC Number & Ticket Number
 """
 
 from flask import Flask, jsonify, request, send_from_directory, Response
-from flask_cors import CORS
+try:
+    from flask_cors import CORS
+except ImportError:
+    CORS = None
 import sqlite3
 import os
 import csv
@@ -16,7 +19,8 @@ STATIC_DIR = os.path.join(BASE_DIR, 'static')
 DB_PATH = os.path.join(BASE_DIR, 'goldloan.db')
 
 app = Flask(__name__, static_folder=STATIC_DIR)
-CORS(app)
+if CORS:
+    CORS(app)
 
 
 def get_db():
