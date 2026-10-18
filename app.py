@@ -384,6 +384,51 @@ def gold_rates():
     return jsonify(rates)
 
 
+@app.route('/api/gold-rates/update', methods=['POST'])
+def update_gold_rates():
+    data = request.json or {}
+    try:
+        price_22k = float(data.get('price_22k', 0))
+    except (ValueError, TypeError):
+        price_22k = 0
+
+    if price_22k <= 0:
+        return jsonify({'error': 'Please enter a valid positive 22K gold price'}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    karats = [22, 21, 20, 19, 18, 17, 16]
+    for kt in karats:
+        price = round((price_22k / 22.0) * kt, 2)
+        cib_rate = 0.70
+        cg_rate = 0.90
+        cib_advance = round(price * cib_rate, 2)
+        cg_advance = round(price * cg_rate, 2)
+        diff = round(cg_advance - cib_advance, 2)
+
+        c.execute("""
+            UPDATE gold_rates
+            SET price = ?, cib_rate = ?, cib_advance = ?, cg_rate = ?, cg_advance = ?, difference = ?, rate_date = ?
+            WHERE karat = ?
+        """, (price, cib_rate, cib_advance, cg_rate, cg_advance, diff, now_str, kt))
+
+    conn.commit()
+
+    c.execute("SELECT * FROM gold_rates ORDER BY karat DESC")
+    updated_rates = [dict(row) for row in c.fetchall()]
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': f"Today's Gold Rates updated successfully (Base 22K: Rs. {price_22k:,.2f})",
+        'updated_at': now_str,
+        'rates': updated_rates
+    })
+
+
+
 # ==================== PRODUCT RATES ====================
 
 @app.route('/api/product-rates')

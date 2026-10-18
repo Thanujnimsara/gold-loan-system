@@ -25,6 +25,7 @@ let customersState = {
 // ==================== INITIALIZATION ====================
 
 document.addEventListener('DOMContentLoaded', () => {
+    startLiveClock();
     loadDashboard();
 
     // Close search on click outside
@@ -96,6 +97,85 @@ async function apiGet(url) {
         return null;
     }
 }
+
+async function apiPost(url, data) {
+    try {
+        const response = await fetch(`${API_BASE}${url}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const resData = await response.json();
+        if (!response.ok) {
+            return { error: resData.error || `HTTP ${response.status}`, ...resData };
+        }
+        return resData;
+    } catch (error) {
+        console.error('API POST Error:', error);
+        return { error: error.message };
+    }
+}
+
+// ==================== LIVE REAL-TIME CLOCK & TODAY DATE ====================
+
+function formatTodayDateLong(d) {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function formatTodayDateShort(d) {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function formatLiveTime(d) {
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hStr = String(hours).padStart(2, '0');
+    return `${hStr}:${minutes}:${seconds} ${ampm}`;
+}
+
+function updateLiveClock() {
+    const now = new Date();
+    const longDate = formatTodayDateLong(now);
+    const shortDate = formatTodayDateShort(now);
+    const timeStr = formatLiveTime(now);
+
+    // Top Bar widget
+    const topBarDate = document.getElementById('topBarDateText');
+    const topBarTime = document.getElementById('topBarTimeText');
+    if (topBarDate) topBarDate.textContent = shortDate;
+    if (topBarTime) topBarTime.textContent = timeStr;
+
+    // Gold Rates page badge
+    const goldRatesDate = document.getElementById('goldRatesTodayDate');
+    const goldRatesTime = document.getElementById('goldRatesTodayTime');
+    if (goldRatesDate) goldRatesDate.textContent = longDate;
+    if (goldRatesTime) goldRatesTime.textContent = timeStr;
+
+    // Gold Rates status bar
+    const ratesValidDate = document.getElementById('ratesValidDateText');
+    if (ratesValidDate) ratesValidDate.textContent = longDate;
+
+    // Modal date
+    const modalDate = document.getElementById('modalTodayDateText');
+    if (modalDate) modalDate.textContent = `Today: ${longDate}`;
+}
+
+let liveClockInterval = null;
+function startLiveClock() {
+    updateLiveClock();
+    if (!liveClockInterval) {
+        liveClockInterval = setInterval(updateLiveClock, 1000);
+    }
+}
+
 
 function formatMoney(amount) {
     if (amount == null || isNaN(amount)) return '-';
@@ -768,16 +848,24 @@ async function loadAuctions() {
 
 // ==================== GOLD RATES PAGE ====================
 
+let currentGoldRatesData = [];
+
 async function loadGoldRates() {
     const data = await apiGet('/api/gold-rates');
     if (!data) return;
 
+    currentGoldRatesData = data;
     const grid = document.getElementById('goldRatesGrid');
+    if (!grid) return;
 
     if (!data.length) {
         grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📈</div><div class="empty-state-text">No gold rate data</div></div>';
         return;
     }
+
+    const now = new Date();
+    const todayShort = `${now.getDate()} ${now.toLocaleDateString('en-GB', { month: 'short' })} ${now.getFullYear()}`;
+    const timeShort = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
 
     grid.innerHTML = data.map(r => `
         <div class="rate-card">
@@ -786,8 +874,127 @@ async function loadGoldRates() {
             <div class="rate-price">Rs. ${formatMoney(r.price)}</div>
             <div class="rate-detail">CIB: Rs. ${formatMoney(r.cib_advance)} (${r.cib_rate ? (r.cib_rate * 100).toFixed(0) : '-'}%)</div>
             <div class="rate-detail">CG: Rs. ${formatMoney(r.cg_advance)} (${r.cg_rate ? (r.cg_rate * 100).toFixed(0) : '-'}%)</div>
+            <div class="rate-card-today-tag">
+                <span class="live-pulse-dot" style="width:6px;height:6px;"></span>
+                <span>Today's Rate (${todayShort})</span>
+            </div>
         </div>
     `).join('');
+
+    const lastSyncEl = document.getElementById('ratesLastUpdatedText');
+    if (lastSyncEl) {
+        lastSyncEl.innerHTML = `<span style="color:#10b981;">● Synced live at ${timeShort}</span>`;
+    }
+}
+
+// Modal functions for updating Today's Gold Rates
+function openUpdateRatesModal() {
+    const modal = document.getElementById('updateRatesModal');
+    if (!modal) return;
+    
+    // Find current 22k price
+    let p22 = 344000;
+    if (currentGoldRatesData && currentGoldRatesData.length) {
+        const r22 = currentGoldRatesData.find(x => parseInt(x.karat) === 22);
+        if (r22 && r22.price) p22 = Math.round(r22.price);
+    }
+    
+    const input22 = document.getElementById('modalPrice22k');
+    if (input22) {
+        input22.value = p22;
+    }
+    
+    const msgEl = document.getElementById('modalRatesMsg');
+    if (msgEl) {
+        msgEl.style.display = 'none';
+        msgEl.textContent = '';
+    }
+    
+    previewCalculatedRates();
+    modal.style.display = 'flex';
+}
+
+function closeUpdateRatesModal() {
+    const modal = document.getElementById('updateRatesModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function previewCalculatedRates() {
+    const input = document.getElementById('modalPrice22k');
+    const grid = document.getElementById('modalRatesPreviewGrid');
+    if (!input || !grid) return;
+
+    const p22 = parseFloat(input.value) || 0;
+    if (p22 <= 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#888; font-size:12px; padding:10px;">Enter a valid 22KT price to preview breakdown</div>';
+        return;
+    }
+
+    const karats = [24, 22, 21, 20, 19, 18, 17, 16];
+    grid.innerHTML = karats.map(kt => {
+        const price = Math.round((p22 / 22.0) * kt);
+        const cib = Math.round(price * 0.70);
+        const is22 = kt === 22;
+        return `
+            <div style="background:${is22 ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${is22 ? 'var(--gold-500)' : 'rgba(255,255,255,0.08)'}; border-radius:6px; padding:8px; text-align:center;">
+                <div style="font-size:12px; font-weight:800; color:${is22 ? 'var(--gold-400)' : '#fff'};">${kt} KT</div>
+                <div style="font-size:13px; font-weight:700; color:#fff; margin:2px 0;">Rs. ${formatMoney(price)}</div>
+                <div style="font-size:10px; color:var(--text-muted);">CIB: Rs. ${formatMoney(cib)}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function saveTodayGoldRates() {
+    const input = document.getElementById('modalPrice22k');
+    const msgEl = document.getElementById('modalRatesMsg');
+    const btn = document.getElementById('btnSaveTodayRates');
+    
+    const p22 = parseFloat(input.value) || 0;
+    if (p22 <= 0) {
+        if (msgEl) {
+            msgEl.style.display = 'block';
+            msgEl.style.background = 'rgba(239,68,68,0.15)';
+            msgEl.style.color = '#f87171';
+            msgEl.textContent = 'Please enter a valid positive 22K base rate.';
+        }
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+    if (msgEl) {
+        msgEl.style.display = 'block';
+        msgEl.style.background = 'rgba(212,175,55,0.15)';
+        msgEl.style.color = 'var(--gold-400)';
+        msgEl.textContent = 'Saving today\'s rates...';
+    }
+
+    const res = await apiPost('/api/gold-rates/update', { price_22k: p22 });
+    if (btn) btn.disabled = false;
+
+    if (res && res.success) {
+        if (msgEl) {
+            msgEl.style.background = 'rgba(16,185,129,0.15)';
+            msgEl.style.color = '#10b981';
+            msgEl.textContent = '✓ ' + res.message;
+        }
+        
+        // Refresh rates grid and billing state
+        await loadGoldRates();
+        if (typeof initBillingPage === 'function') {
+            await initBillingPage();
+        }
+
+        setTimeout(() => {
+            closeUpdateRatesModal();
+        }, 1200);
+    } else {
+        if (msgEl) {
+            msgEl.style.background = 'rgba(239,68,68,0.15)';
+            msgEl.style.color = '#f87171';
+            msgEl.textContent = (res && res.error) ? res.error : 'Failed to update rates. Please try again.';
+        }
+    }
 }
 
 // ==================== PRODUCT RATES PAGE ====================

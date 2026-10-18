@@ -109,6 +109,14 @@
                     </div>
                     <div class="search-results-dropdown" id="searchResults"></div>
                 </div>
+                <!-- Live Today Date & Time in Top Bar -->
+                <div class="top-bar-live-widget" title="Current Local Time (Live on-time)">
+                    <span class="live-pulse-dot"></span>
+                    <span class="live-today-chip">TODAY</span>
+                    <span id="topBarDateText" class="top-bar-date-val">--</span>
+                    <span id="topBarTimeText" class="top-bar-time-val">--:--:--</span>
+                </div>
+
                 <div class="top-bar-actions">
                     <button class="top-bar-bill-btn" onclick="navigate('billing')" title="Create Bill / Sell Gold" style="display:flex;align-items:center;gap:6px;background:var(--gradient-gold);color:#0a0a0f;font-weight:700;font-size:13px;padding:8px 14px;border:none;border-radius:var(--radius-sm);cursor:pointer;box-shadow:var(--shadow-gold);">
                         <span>🧾</span> New Bill
@@ -450,10 +458,47 @@
             <!-- Gold Rates Page -->
             <div class="page" id="page-gold-rates">
                 <div class="page-content">
-                    <div class="page-header">
-                        <h2 class="page-title">Gold Rates</h2>
-                        <p class="page-subtitle">Current gold price per karat</p>
+                    <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+                        <div>
+                            <h2 class="page-title">Gold Rates</h2>
+                            <p class="page-subtitle">Official gold price per karat • Valid for Today</p>
+                        </div>
+                        <div class="rates-header-actions" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <!-- Live Today Date Badge -->
+                            <div class="today-live-badge" title="Live System Date & Time">
+                                <div class="today-badge-top">
+                                    <span class="live-pulse-dot"></span>
+                                    <span class="today-badge-tag">TODAY</span>
+                                    <span class="today-badge-live-text">LIVE ON-TIME</span>
+                                </div>
+                                <div class="today-badge-date" id="goldRatesTodayDate">Loading Today...</div>
+                                <div class="today-badge-time" id="goldRatesTodayTime">--:--:-- --</div>
+                            </div>
+                            <!-- Action Buttons -->
+                            <div style="display:flex; flex-direction:column; gap:6px;">
+                                <button type="button" class="btn btn-primary-gold" onclick="openUpdateRatesModal()" style="display:flex; align-items:center; gap:6px; padding:9px 14px; font-size:13px; font-weight:700;">
+                                    <span>✏️</span> Update Today's Rates
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="loadGoldRates()" style="display:flex; align-items:center; gap:6px; padding:6px 12px; font-size:12px; justify-content:center;">
+                                    <span>🔄</span> Refresh Rates
+                                </button>
+                            </div>
+                        </div>
                     </div>
+                    
+                    <!-- Rates Status Bar -->
+                    <div class="rates-status-bar" id="ratesStatusBar">
+                        <div class="status-bar-left">
+                            <span class="status-icon">📅</span>
+                            <span>Official Rates for: <strong id="ratesValidDateText" style="color:var(--gold-400);">Today</strong></span>
+                            <span class="status-divider">•</span>
+                            <span>Status: <strong style="color:#10b981;">● Active & Verified On-time</strong></span>
+                        </div>
+                        <div class="status-bar-right" id="ratesLastUpdatedText">
+                            Auto-sync: Live on-time
+                        </div>
+                    </div>
+
                     <div class="rates-grid" id="goldRatesGrid"></div>
                 </div>
             </div>
@@ -1180,6 +1225,60 @@
     <div id="redeemedFloatingTrigger" class="redeemed-trigger" onclick="openRedeemedPopup()" title="View Redeemed Follow-up Alerts">
         <span>🔔</span>
         <span class="trigger-badge" id="floating-badge-count">0</span>
+    </div>
+
+    <!-- Update Gold Rates Modal -->
+    <div id="updateRatesModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.78); z-index:9999; backdrop-filter:blur(5px); align-items:center; justify-content:center;">
+        <div class="modal-card" style="background:#13151c; border:1px solid rgba(212,175,55,0.35); border-radius:14px; width:92%; max-width:540px; box-shadow:0 25px 50px rgba(0,0,0,0.85); overflow:hidden;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:linear-gradient(135deg, rgba(212,175,55,0.18), rgba(0,0,0,0.5)); border-bottom:1px solid rgba(212,175,55,0.25);">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:20px;">📈</span>
+                    <h3 style="margin:0; font-size:16px; font-weight:700; color:#fff;">Update Today's Gold Rates</h3>
+                </div>
+                <button type="button" onclick="closeUpdateRatesModal()" style="background:none; border:none; color:#aaa; font-size:20px; cursor:pointer; padding:4px 8px; line-height:1;">✕</button>
+            </div>
+            <div style="padding:20px;">
+                <div style="background:rgba(212,175,55,0.08); border:1px solid rgba(212,175,55,0.25); border-radius:8px; padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:600;">Effective Date (අද දිනය)</div>
+                        <div style="font-size:14px; font-weight:700; color:var(--gold-400);" id="modalTodayDateText">Today: --</div>
+                    </div>
+                    <span class="live-pulse-dot"></span>
+                </div>
+
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="display:block; font-size:13px; font-weight:600; color:#fff; margin-bottom:6px;">
+                        22 Karat Base Price (LKR) <span style="color:#d9534f;">*</span>
+                    </label>
+                    <div style="position:relative;">
+                        <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-weight:700; color:var(--gold-400); font-size:14px;">Rs.</span>
+                        <input type="number" id="modalPrice22k" step="100" placeholder="e.g. 344000" 
+                               oninput="previewCalculatedRates()"
+                               style="width:100%; padding:10px 12px 10px 45px; background:#0d0e12; border:1px solid rgba(212,175,55,0.4); border-radius:6px; color:#fff; font-size:16px; font-weight:700;">
+                    </div>
+                    <small style="color:var(--text-muted); font-size:11px; margin-top:4px; display:block;">
+                        Enter today's 22KT gold sovereign rate. All other karats (21K–16K) will auto-calculate proportionally.
+                    </small>
+                </div>
+
+                <!-- Preview Grid -->
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:8px;">Calculated Karat Breakdown for Today:</div>
+                    <div id="modalRatesPreviewGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:8px; max-height:180px; overflow-y:auto; background:#0a0b0e; padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
+                        <!-- Auto-filled by JS -->
+                    </div>
+                </div>
+
+                <div id="modalRatesMsg" style="display:none; font-size:12px; margin-bottom:12px; padding:10px; border-radius:6px;"></div>
+
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeUpdateRatesModal()" style="padding:9px 16px;">Cancel</button>
+                    <button type="button" class="btn btn-primary-gold" id="btnSaveTodayRates" onclick="saveTodayGoldRates()" style="padding:9px 20px; font-weight:700;">
+                        💾 Save Today's Rates
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/app.js"></script>
