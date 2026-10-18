@@ -513,18 +513,31 @@
                             <!-- Left Column: Customer & Gold Article Selection -->
                             <div class="billing-left-col">
                                 <!-- Customer Selection Card -->
-                                <div class="card billing-card">
-                                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-                                        <div class="card-title">1. Customer & Loan Selection</div>
-                                        <button type="button" class="btn-text-gold" onclick="resetCustomerSelection()" style="font-size:12px; cursor:pointer; background:none; border:none; color:var(--text-gold);">✕ Clear</button>
+                                <div class="card billing-card" style="box-shadow: 0 4px 20px rgba(0,0,0,0.25); border: 1px solid rgba(255,215,0,0.18);">
+                                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px;">
+                                        <div style="display:flex; align-items:center; gap:10px;">
+                                            <div style="width:32px; height:32px; border-radius:8px; background:rgba(234,179,8,0.15); display:flex; align-items:center; justify-content:center; color:var(--text-gold); font-size:16px;">👤</div>
+                                            <div>
+                                                <div class="card-title" style="font-size:15px; font-weight:700; color:#fff;">1. Customer & Loan Selection</div>
+                                                <div style="font-size:11px; color:var(--text-muted);">Quick search by Ticket or NIC to auto-fill details</div>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn-text-gold" onclick="resetCustomerSelection()" style="font-size:11.5px; font-weight:600; cursor:pointer; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:5px 12px; color:var(--text-gold); transition:all 0.2s;">✕ Clear</button>
                                     </div>
                                     <div class="card-body">
                                         <!-- Instant Search Bar for Customer -->
-                                        <div class="input-group" id="billCustomerSearchBox" style="position:relative; margin-bottom:14px;">
-                                            <label class="input-label">Search Customer by NIC or Ticket No</label>
+                                        <div class="input-group" id="billCustomerSearchBox" style="position:relative; margin-bottom:16px; background:rgba(234,179,8,0.03); border:1px dashed rgba(234,179,8,0.25); border-radius:10px; padding:12px;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                                <label class="input-label" style="color:var(--text-gold); font-size:11px; font-weight:700; letter-spacing:0.6px;">
+                                                    🔍 SEARCH TICKET NO OR NIC NUMBER
+                                                </label>
+                                                <span style="font-size:10.5px; color:#10b981; font-weight:600; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.25); padding:2px 8px; border-radius:10px;">⚡ Auto-Fill Ready</span>
+                                            </div>
                                             <div style="display:flex; gap:8px;">
-                                                <input type="text" id="billCustomerSearchInput" class="custom-input" value="L/PW/UH/" placeholder="Type Ticket No (e.g. L/PW/UH/000001) or NIC..." oninput="handleBillingSearch()" onkeydown="if(event.key==='Enter'){handleBillingSearch(true);}" onfocus="if(!this.value){this.value='L/PW/UH/';}" autocomplete="off">
-                                                <button type="button" class="btn btn-secondary" onclick="handleBillingSearch(true)" style="white-space:nowrap; padding:0 16px;">Search</button>
+                                                <input type="text" id="billCustomerSearchInput" class="custom-input" value="L/PW/UH/" placeholder="Type Ticket No (e.g. L/PW/UH/000001) or NIC..." oninput="handleBillingSearch()" onkeydown="if(event.key==='Enter'){handleBillingSearch(true);}" onfocus="if(!this.value){this.value='L/PW/UH/';}" autocomplete="off" style="font-family:monospace; font-weight:700; font-size:14px; letter-spacing:0.5px; background:rgba(12,12,18,0.9); border-color:rgba(234,179,8,0.4); color:#fff;">
+                                                <button type="button" class="btn btn-gold" onclick="handleBillingSearch(true)" style="white-space:nowrap; padding:0 20px; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+                                                    <span>🔍</span> Search
+                                                </button>
                                             </div>
                                             <div class="billing-search-dropdown" id="billingSearchDropdown"></div>
                                         </div>
@@ -532,34 +545,34 @@
                                         <!-- Customer Information Inputs (Pre-filled or editable) -->
                                         <div class="form-row-2">
                                             <div class="input-group">
-                                                <label class="input-label">Customer Name *</label>
+                                                <label class="input-label">👤 Customer Name *</label>
                                                 <input type="text" id="billCustomerName" class="custom-input" placeholder="Enter Full Name">
                                             </div>
                                             <div class="input-group">
-                                                <label class="input-label">NIC Number</label>
+                                                <label class="input-label">🪪 NIC Number</label>
                                                 <input type="text" id="billCustomerNic" class="custom-input" placeholder="e.g. 198512345678 or 723442834V" oninput="handleNicAutoFill(this.value)" onblur="handleNicAutoFill(this.value)">
                                             </div>
                                         </div>
                                         <div class="form-row-2">
                                             <div class="input-group">
-                                                <label class="input-label">Phone / Mobile</label>
+                                                <label class="input-label">📞 Phone / Mobile</label>
                                                 <input type="text" id="billCustomerPhone" class="custom-input" placeholder="077xxxxxxx">
                                             </div>
                                             <div class="input-group">
-                                                <label class="input-label">Ticket / Loan Ref</label>
-                                                <input type="text" id="billTicketNo" class="custom-input" placeholder="e.g. L/PW/UH/000001 (Optional)" readonly>
+                                                <label class="input-label">🎫 Ticket / Loan Ref</label>
+                                                <input type="text" id="billTicketNo" class="custom-input" placeholder="e.g. L/PW/UH/000001" readonly style="font-family:monospace; font-weight:600; color:var(--text-gold);">
                                             </div>
                                         </div>
                                         <div class="input-group">
-                                            <label class="input-label">Address</label>
-                                            <input type="text" id="billCustomerAddress" class="custom-input" placeholder="Customer Address">
+                                            <label class="input-label">📍 Customer Address</label>
+                                            <input type="text" id="billCustomerAddress" class="custom-input" placeholder="Customer Address (Street, City)">
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Available Gold Articles from Customer Loan Card -->
-                                <div class="card billing-card" id="loanArticlesCard" style="display:none; margin-top:20px;">
-                                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                                <div class="card billing-card" id="loanArticlesCard" style="display:none; margin-top:20px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); border: 1px solid rgba(255,215,0,0.18);">
+                                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px;">
                                         <div class="card-title">📦 Customer Pledged Gold Articles</div>
                                         <span class="badge badge-gold" id="loanArticlesBadge">0 items available</span>
                                     </div>
@@ -584,19 +597,26 @@
                                 </div>
 
                                 <!-- Add Custom / Direct Gold Article Card -->
-                                <div class="card billing-card" style="margin-top:20px;">
-                                    <div class="card-header">
-                                        <div class="card-title">➕ Add Custom Gold Article / Direct Sale</div>
+                                <div class="card billing-card" style="margin-top:20px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); border: 1px solid rgba(255,215,0,0.18);">
+                                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px;">
+                                        <div style="display:flex; align-items:center; gap:10px;">
+                                            <div style="width:32px; height:32px; border-radius:8px; background:rgba(234,179,8,0.15); display:flex; align-items:center; justify-content:center; color:var(--text-gold); font-size:16px;">✨</div>
+                                            <div>
+                                                <div class="card-title" style="font-size:15px; font-weight:700; color:#fff;">2. Add Gold Article / Direct Sale</div>
+                                                <div style="font-size:11px; color:var(--text-muted);">Enter article name, manual karat, weight & rate per gram</div>
+                                            </div>
+                                        </div>
+                                        <span style="font-size:11px; color:var(--text-gold); font-weight:600; background:rgba(234,179,8,0.1); border:1px solid rgba(234,179,8,0.25); border-radius:12px; padding:3px 10px;">✍️ Manual Karat Entry</span>
                                     </div>
                                     <div class="card-body">
-                                        <div class="form-row-4">
+                                        <div class="form-row-4" style="grid-template-columns: 1.6fr 0.9fr 1fr 1.2fr; gap:12px;">
                                             <div class="input-group">
-                                                <label class="input-label">Article Name</label>
+                                                <label class="input-label" style="white-space:nowrap;">💍 Article Name</label>
                                                 <input type="text" id="customArticleName" class="custom-input" placeholder="e.g. Gold Necklace, Ring" value="Gold Article">
                                             </div>
                                             <div class="input-group">
-                                                <label class="input-label">Karat (Manual Entry)</label>
-                                                <input type="number" id="customArticleKarat" class="custom-input" list="karatQuickList" min="1" max="24" step="any" value="22" placeholder="e.g. 22" oninput="updateCustomRateByKarat()">
+                                                <label class="input-label" style="white-space:nowrap;">💎 Karat (KT)</label>
+                                                <input type="number" id="customArticleKarat" class="custom-input" list="karatQuickList" min="1" max="24" step="any" value="22" placeholder="22" oninput="updateCustomRateByKarat()" style="font-weight:700; color:var(--text-gold); text-align:center;">
                                                 <datalist id="karatQuickList">
                                                     <option value="24">24 Karat (99.9%)</option>
                                                     <option value="22">22 Karat (91.6%)</option>
@@ -606,20 +626,26 @@
                                                 </datalist>
                                             </div>
                                             <div class="input-group">
-                                                <label class="input-label">Weight (g)</label>
-                                                <input type="number" id="customArticleWeight" class="custom-input" step="0.01" min="0.01" placeholder="8.00" value="8.00" oninput="calculateCustomItemPrice()">
+                                                <label class="input-label" style="white-space:nowrap;">⚖️ Weight (g)</label>
+                                                <input type="number" id="customArticleWeight" class="custom-input" step="0.01" min="0.01" placeholder="8.00" value="8.00" oninput="calculateCustomItemPrice()" style="font-weight:700;">
                                             </div>
                                             <div class="input-group">
-                                                <label class="input-label">Rate / g (LKR)</label>
-                                                <input type="number" id="customArticleRate" class="custom-input" step="10" placeholder="43000" value="43000" oninput="calculateCustomItemPrice()">
+                                                <label class="input-label" style="white-space:nowrap;">🏷️ Rate / g (LKR)</label>
+                                                <input type="number" id="customArticleRate" class="custom-input" step="10" placeholder="43000" value="43000" oninput="calculateCustomItemPrice()" style="font-weight:700; color:var(--text-gold);">
                                             </div>
                                         </div>
-                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap; gap:10px;">
-                                            <div style="font-size:13px; color:var(--text-secondary);">
-                                                Calculated Item Total: <strong id="customItemTotalDisplay" style="color:var(--text-gold); font-size:16px;">Rs. 344,000</strong>
+
+                                        <!-- Item Total & Add to Bill Action Bar -->
+                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding:12px 18px; background:rgba(234,179,8,0.05); border:1px solid rgba(234,179,8,0.2); border-radius:10px; flex-wrap:wrap; gap:12px;">
+                                            <div style="display:flex; align-items:center; gap:10px;">
+                                                <span style="font-size:22px;">💰</span>
+                                                <div>
+                                                    <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Calculated Item Total</div>
+                                                    <div id="customItemTotalDisplay" style="color:var(--text-gold); font-size:20px; font-weight:700; font-family:'Outfit', sans-serif;">Rs. 344,000</div>
+                                                </div>
                                             </div>
-                                            <button type="button" class="btn btn-gold" onclick="addCustomItemToBill()" style="padding:8px 16px;">
-                                                ➕ Add to Bill
+                                            <button type="button" class="btn btn-gold" onclick="addCustomItemToBill()" style="padding:10px 22px; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(234,179,8,0.3); border-radius:8px;">
+                                                <span>➕</span> Add to Bill
                                             </button>
                                         </div>
                                     </div>
